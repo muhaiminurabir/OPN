@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">OPN Mart</string>
+    <string name="store_string">Store Name : </string>
+    <string name="rating_string">Ratting : </string>
+    <string name="open_string">Start Time : </string>
+    <string name="end_string">End Time : </string>
+</resources>
