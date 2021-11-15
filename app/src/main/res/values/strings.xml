@@ -4,4 +4,6 @@
     <string name="rating_string">Ratting : </string>
     <string name="open_string">Start Time : </string>
     <string name="end_string">End Time : </string>
+    <string name="name_string">Name : </string>
+    <string name="price_string">Price : </string>
 </resources>

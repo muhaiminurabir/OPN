@@ -1,11 +1,14 @@
 package com.misfit.opnmart.http;
 
 import com.google.gson.JsonElement;
+import com.misfit.opnmart.model.Productdatum;
 import com.misfit.opnmart.model.Storedata;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import kotlinx.coroutines.channels.ProduceKt;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
@@ -27,5 +30,5 @@ public interface ApiService {
     //2 get product information
     @Headers({"Content-Type:application/json", "Accept: application/json"})
     @GET("products")
-    Call<Storedata> get_productlist();
+    Call<List<Productdatum>> get_productlist();
 }
