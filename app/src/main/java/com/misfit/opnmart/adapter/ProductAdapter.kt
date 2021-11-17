@@ -10,11 +10,15 @@ import com.bumptech.glide.Glide
 import com.misfit.opnmart.R
 import com.misfit.opnmart.databinding.RecyclerProductBinding
 import com.misfit.opnmart.model.Productdatum
+import com.misfit.opnmart.utility.ProductClickListener
+import com.misfit.opnmart.view.DashboaredPage
 
-class ProductAdapter(to: List<Productdatum>?, c: Context?) :
+class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: ProductClickListener) :
     RecyclerView.Adapter<ProductAdapter.Todo_View_Holder>() {
     private var context: Context? = c
     private var list: List<Productdatum>? = to
+    private var click: ProductClickListener? = proClickListener
+
 
     class Todo_View_Holder(view: RecyclerProductBinding) :
         RecyclerView.ViewHolder(view.getRoot()) {
@@ -43,6 +47,9 @@ class ProductAdapter(to: List<Productdatum>?, c: Context?) :
             Glide.with(context!!)
                 .load(bodyResponse.imageUrl.toString())
                 .into(holder.productBinding.comingImage)
+            holder.productBinding.productAdd.setOnClickListener {
+                click?.onproductClickListener(bodyResponse)
+            }
             //holder.productBinding.productName.text = bodyResponse.name
             //holder.productBinding.productPrice.text = bodyResponse.price.toString()
         } catch (e: Exception) {
