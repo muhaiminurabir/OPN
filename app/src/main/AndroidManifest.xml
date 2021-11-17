@@ -13,6 +13,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OPNMart">
         <activity
+            android:name=".view.CheckoutPage"
+            android:exported="false" />
+        <activity
             android:name=".view.DashboaredPage"
             android:exported="true">
             <intent-filter>

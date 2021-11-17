@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout>
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:context=".view.CheckoutPage">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/checkout_productlist"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_margin="15dp"
+            android:layout_weight="1" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_drop_shadow" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/checkout_total"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="3dp"
+            android:padding="5dp"
+            android:textAlignment="textEnd"
+            android:textColor="@color/app_ash4"
+            android:textSize="@dimen/font_big"
+            android:textStyle="normal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/checkout_orderplace"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="5dp"
+            android:background="@color/app_ash4"
+            android:text="@string/order_string"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            android:textSize="@dimen/font_xl"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
+    </LinearLayout>
+</layout>

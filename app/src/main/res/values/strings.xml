@@ -9,4 +9,10 @@
     <string name="addcart_string">Add to Cart</string>
     <string name="checkout_string">Checkout</string>
     <string name="item_string">Item Added : </string>
+    <string name="totalprice_string">Total Price : </string>
+    <string name="order_string">Order Place</string>
+    <string name="confirm_string">OK</string>
+    <string name="suc_string">Order Placed</string>
+    <string name="try_string">Try Again Later</string>
+
 </resources>

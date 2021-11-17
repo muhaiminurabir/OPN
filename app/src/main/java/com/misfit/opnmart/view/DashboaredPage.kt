@@ -1,7 +1,9 @@
 package com.misfit.opnmart.view
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.provider.AlarmClock.EXTRA_MESSAGE
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -12,6 +14,7 @@ import com.misfit.opnmart.adapter.ProductAdapter
 import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
 import com.misfit.opnmart.http.Controller
 import com.misfit.opnmart.model.Productdatum
+import com.misfit.opnmart.utility.Keyword
 import com.misfit.opnmart.utility.ProductClickListener
 import com.misfit.opnmart.viewmodel.ProductViewmodel
 import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
@@ -23,7 +26,9 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
 
     var adapter: ProductAdapter? = null
     var list = ArrayList<Productdatum>()
+    var cartlist = ArrayList<Productdatum>()
     var context: Context? = null
+    var price: Int = 0
 
     private lateinit var viewModel: ProductViewmodel
 
@@ -31,10 +36,21 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
         super.onCreate(savedInstanceState)
         binding = ActivityDashboredpageBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        context = this
-        val factory = ProductViewmodelFactory()
-        viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
-        initial_list()
+        try {
+            context = this
+            val factory = ProductViewmodelFactory()
+            viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+            initial_list()
+            binding.storeOrderplace.setOnClickListener {
+                var extras = Bundle()
+                extras.putSerializable(Keyword.CARTPAGE, cartlist)
+                val intent = Intent(this, CheckoutPage::class.java)
+                intent.putExtras(extras)
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            Log.d("Error Line Number", Log.getStackTraceString(e));
+        }
     }
 
     fun observer() {
@@ -53,7 +69,9 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
         })
         viewModel.catlist.observe(this, androidx.lifecycle.Observer {
             if (it != null) {
-                var price: Int = 0
+                cartlist.clear()
+                cartlist.addAll(it)
+                price = 0
                 for (cart in it) {
                     price = price + cart.price
                 }

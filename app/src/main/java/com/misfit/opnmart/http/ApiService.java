@@ -1,7 +1,9 @@
 package com.misfit.opnmart.http;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.misfit.opnmart.model.Productdatum;
+import com.misfit.opnmart.model.SendCart;
 import com.misfit.opnmart.model.Storedata;
 
 import java.util.HashMap;
@@ -13,6 +15,7 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Headers;
@@ -31,4 +34,10 @@ public interface ApiService {
     @Headers({"Content-Type:application/json", "Accept: application/json"})
     @GET("products")
     Call<List<Productdatum>> get_productlist();
+
+    //3 get checkout information
+    //@FormUrlEncoded
+    @Headers({"Content-Type:application/json", "Accept: application/json"})
+    @POST("order")
+    Call<Void> send_checkout(@Body HashMap sendCart);
 }
