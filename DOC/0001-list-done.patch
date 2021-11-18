@@ -1,0 +1,375 @@
+From a6259c4e2742f12478c130cf92e275fdaeee80a7 Mon Sep 17 00:00:00 2001
+From: Muhaiminur Rahman <muhaiminurabir@gmail.com>
+Date: Mon, 15 Nov 2021 11:34:15 +0600
+Subject: [PATCH 1/7] list done
+
+---
+ .idea/gradle.xml                              |  1 +
+ .idea/misc.xml                                |  1 +
+ .../misfit/opnmart/adapter/ProductAdapter.kt  | 57 +++++++++++++++++++
+ .../com/misfit/opnmart/http/ApiService.java   |  5 +-
+ .../com/misfit/opnmart/model/Productdata.kt   |  9 ---
+ .../com/misfit/opnmart/model/Productdatum.kt  |  9 +++
+ .../com/misfit/opnmart/model/Storedata.kt     | 10 ++--
+ .../com/misfit/opnmart/view/DashboaredPage.kt | 54 ++++++++++++++++++
+ .../res/layout/activity_dashboredpage.xml     | 13 ++++-
+ app/src/main/res/layout/recycler_product.xml  | 28 ++++++++-
+ app/src/main/res/values/strings.xml           |  2 +
+ 11 files changed, 172 insertions(+), 17 deletions(-)
+ create mode 100644 app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+ delete mode 100644 app/src/main/java/com/misfit/opnmart/model/Productdata.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
+
+diff --git a/.idea/gradle.xml b/.idea/gradle.xml
+index 4e3844e..526b4c2 100644
+--- a/.idea/gradle.xml
++++ b/.idea/gradle.xml
+@@ -1,5 +1,6 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
++  <component name="GradleMigrationSettings" migrationVersion="1" />
+   <component name="GradleSettings">
+     <option name="linkedExternalProjectsSettings">
+       <GradleProjectSettings>
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index 7dbd1d2..b9916c1 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -3,6 +3,7 @@
+   <component name="DesignSurface">
+     <option name="filePathToZoomLevelMap">
+       <map>
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/bg_drop_shadow.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/ic_default.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_dashboredpage.xml" value="0.25" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_product.xml" value="0.1" />
+diff --git a/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+new file mode 100644
+index 0000000..269a09e
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+@@ -0,0 +1,57 @@
++package com.misfit.opnmart.adapter
++
++import android.content.Context
++import android.util.Log
++import android.view.LayoutInflater
++import android.view.ViewGroup
++import androidx.databinding.DataBindingUtil
++import androidx.recyclerview.widget.RecyclerView
++import com.bumptech.glide.Glide
++import com.misfit.opnmart.R
++import com.misfit.opnmart.databinding.RecyclerProductBinding
++import com.misfit.opnmart.model.Productdatum
++
++class ProductAdapter(to: List<Productdatum>?, c: Context?) :
++    RecyclerView.Adapter<ProductAdapter.Todo_View_Holder>() {
++    private var context: Context? = c
++    private var list: List<Productdatum>? = to
++
++    class Todo_View_Holder(view: RecyclerProductBinding) :
++        RecyclerView.ViewHolder(view.getRoot()) {
++        var productBinding: RecyclerProductBinding = view
++        fun bind(s: Productdatum?) {
++            productBinding.setProduct(s)
++            productBinding.executePendingBindings()
++        }
++
++    }
++
++    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Todo_View_Holder {
++        val binding: RecyclerProductBinding = DataBindingUtil.inflate(
++            LayoutInflater.from(parent.context),
++            R.layout.recycler_product,
++            parent,
++            false
++        )
++        return Todo_View_Holder(binding)
++    }
++
++    override fun onBindViewHolder(holder: Todo_View_Holder, position: Int) {
++        val bodyResponse: Productdatum = list!![position]
++        try {
++            holder.bind(bodyResponse)
++            Glide.with(context!!)
++                .load(bodyResponse.imageUrl.toString())
++                .into(holder.productBinding.comingImage)
++            //holder.productBinding.productName.text = bodyResponse.name
++            //holder.productBinding.productPrice.text = bodyResponse.price.toString()
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e))
++        }
++    }
++
++    override fun getItemCount(): Int {
++        return list!!.size
++    }
++
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/http/ApiService.java b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+index b031d74..b449b0b 100644
+--- a/app/src/main/java/com/misfit/opnmart/http/ApiService.java
++++ b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+@@ -1,11 +1,14 @@
+ package com.misfit.opnmart.http;
+ 
+ import com.google.gson.JsonElement;
++import com.misfit.opnmart.model.Productdatum;
+ import com.misfit.opnmart.model.Storedata;
+ 
+ import java.util.HashMap;
++import java.util.List;
+ import java.util.Map;
+ 
++import kotlinx.coroutines.channels.ProduceKt;
+ import okhttp3.MultipartBody;
+ import okhttp3.RequestBody;
+ import retrofit2.Call;
+@@ -27,5 +30,5 @@ public interface ApiService {
+     //2 get product information
+     @Headers({"Content-Type:application/json", "Accept: application/json"})
+     @GET("products")
+-    Call<Storedata> get_productlist();
++    Call<List<Productdatum>> get_productlist();
+ }
+diff --git a/app/src/main/java/com/misfit/opnmart/model/Productdata.kt b/app/src/main/java/com/misfit/opnmart/model/Productdata.kt
+deleted file mode 100644
+index c587b34..0000000
+--- a/app/src/main/java/com/misfit/opnmart/model/Productdata.kt
++++ /dev/null
+@@ -1,9 +0,0 @@
+-package com.misfit.opnmart.model
+-
+-typealias Productdata = ArrayList<Productdatum>
+-
+-data class Productdatum(
+-    val name: String? = null,
+-    val price: Long? = null,
+-    val imageURL: String? = null
+-)
+diff --git a/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt b/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
+new file mode 100644
+index 0000000..e0b7e26
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
+@@ -0,0 +1,9 @@
++package com.misfit.opnmart.model
++
++import com.google.gson.annotations.SerializedName
++
++data class Productdatum(
++    @SerializedName("name") val name: String,
++    @SerializedName("price") val price: Int,
++    @SerializedName("imageUrl") val imageUrl: String
++)
+diff --git a/app/src/main/java/com/misfit/opnmart/model/Storedata.kt b/app/src/main/java/com/misfit/opnmart/model/Storedata.kt
+index fd26261..78b80f4 100644
+--- a/app/src/main/java/com/misfit/opnmart/model/Storedata.kt
++++ b/app/src/main/java/com/misfit/opnmart/model/Storedata.kt
+@@ -1,8 +1,10 @@
+ package com.misfit.opnmart.model
+ 
++import com.google.gson.annotations.SerializedName
++
+ data class Storedata(
+-    val name: String? = null,
+-    val rating: Double? = null,
+-    val openingTime: String? = null,
+-    val closingTime: String? = null
++    @SerializedName("name") val name: String,
++    @SerializedName("rating") val rating: Double,
++    @SerializedName("openingTime") val openingTime: String,
++    @SerializedName("closingTime") val closingTime: String
+ )
+diff --git a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+index 52eaa4e..3c21ffa 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+@@ -1,25 +1,43 @@
+ package com.misfit.opnmart.view
+ 
++import android.app.PendingIntent.getActivity
++import android.content.Context
+ import android.os.Bundle
+ import android.util.Log
+ import androidx.appcompat.app.AppCompatActivity
++import androidx.recyclerview.widget.DefaultItemAnimator
++import androidx.recyclerview.widget.LinearLayoutManager
++import androidx.recyclerview.widget.RecyclerView
+ import com.misfit.opnmart.R
++import com.misfit.opnmart.adapter.ProductAdapter
+ import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
+ import com.misfit.opnmart.databinding.ActivityDashboredpageBinding.inflate
+ import com.misfit.opnmart.http.Controller
++import com.misfit.opnmart.model.Productdatum
+ import com.misfit.opnmart.model.Storedata
+ import retrofit2.Call
+ import retrofit2.Callback
+ import retrofit2.Response
++import java.lang.Exception
++import java.util.ArrayList
+ 
+ class DashboaredPage : AppCompatActivity() {
+     private lateinit var binding: ActivityDashboredpageBinding
+     private val apiInterface = Controller.create()
++
++    var adapter: ProductAdapter? = null
++    var list = ArrayList<Productdatum>()
++    var context: Context? = null
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         binding = ActivityDashboredpageBinding.inflate(layoutInflater)
+         setContentView(binding.root)
++        context = this
++
+         getstor()
++        getproductlist()
++        initial_list()
+     }
+ 
+     private fun getstor() {
+@@ -39,4 +57,40 @@ class DashboaredPage : AppCompatActivity() {
+             }
+         })
+     }
++
++    private fun getproductlist() {
++        val call = apiInterface._productlist
++        call.enqueue(object : Callback<List<Productdatum>> {
++            override fun onResponse(
++                call: Call<List<Productdatum>>,
++                response: Response<List<Productdatum>>
++            ) {
++                Log.d("product list", response.toString())
++                if (response.isSuccessful && response.code() == 200) {
++                    Log.d("product list", response.body().toString())
++                    list.addAll(response.body()!!)
++                    adapter!!.notifyDataSetChanged()
++                    //binding.store = response.body()
++                }
++            }
++
++            override fun onFailure(call: Call<List<Productdatum>>, t: Throwable) {
++                Log.d("Error", t.message.toString())
++
++            }
++        })
++    }
++
++    fun initial_list() {
++        try {
++            adapter = ProductAdapter(list, context)
++            val mLayoutManager: RecyclerView.LayoutManager =
++                LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
++            binding.storeProductlist.setLayoutManager(mLayoutManager)
++            binding.storeProductlist.setItemAnimator(DefaultItemAnimator())
++            binding.storeProductlist.setAdapter(adapter)
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e))
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/activity_dashboredpage.xml b/app/src/main/res/layout/activity_dashboredpage.xml
+index 7c412de..579b91c 100644
+--- a/app/src/main/res/layout/activity_dashboredpage.xml
++++ b/app/src/main/res/layout/activity_dashboredpage.xml
+@@ -82,7 +82,7 @@
+                         android:layout_height="wrap_content"
+                         android:layout_margin="3dp"
+                         android:padding="5dp"
+-                        android:text="@{store.rating.toString()}"
++                        android:text="@{store.rating+``}"
+                         android:textAlignment="textStart"
+                         android:textColor="@color/app_ash4"
+                         android:textSize="@dimen/font_m"
+@@ -150,6 +150,17 @@
+                 </androidx.constraintlayout.widget.ConstraintLayout>
+             </androidx.cardview.widget.CardView>
+ 
++            <View
++                android:layout_width="match_parent"
++                android:layout_height="1dp"
++                android:layout_margin="2dp"
++                android:background="@drawable/bg_drop_shadow" />
++
++            <androidx.recyclerview.widget.RecyclerView
++                android:id="@+id/store_productlist"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:layout_margin="5dp" />
+         </LinearLayout>
+     </ScrollView>
+ </layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/recycler_product.xml b/app/src/main/res/layout/recycler_product.xml
+index 4fff3bb..340790d 100644
+--- a/app/src/main/res/layout/recycler_product.xml
++++ b/app/src/main/res/layout/recycler_product.xml
+@@ -5,7 +5,7 @@
+ 
+         <variable
+             name="product"
+-            type="com.misfit.opnmart.model.ProductdataKt" />
++            type="com.misfit.opnmart.model.Productdatum" />
+     </data>
+ 
+     <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+@@ -29,7 +29,7 @@
+                 android:layout_width="match_parent"
+                 android:layout_height="150dp"
+                 android:contentDescription="@string/app_name"
+-                android:scaleType="fitCenter"
++                android:scaleType="fitXY"
+                 android:src="@drawable/ic_default" />
+ 
+             <View
+@@ -37,6 +37,30 @@
+                 android:layout_height="1dp"
+                 android:layout_margin="2dp"
+                 android:background="@drawable/bg_drop_shadow" />
++
++            <TextView
++                android:id="@+id/product_name"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:layout_margin="3dp"
++                android:padding="5dp"
++                android:text="@{@string/name_string.concat(product.name)}"
++                android:textAlignment="textStart"
++                android:textColor="@color/app_ash4"
++                android:textSize="@dimen/font_m"
++                android:textStyle="normal" />
++
++            <TextView
++                android:id="@+id/product_price"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:layout_margin="3dp"
++                android:padding="5dp"
++                android:text="@{@string/price_string.concat(product.price+``)}"
++                android:textAlignment="textStart"
++                android:textColor="@color/app_ash4"
++                android:textSize="@dimen/font_m"
++                android:textStyle="normal" />
+         </LinearLayout>
+     </androidx.cardview.widget.CardView>
+ </layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 2b0ece5..2a7c542 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -4,4 +4,6 @@
+     <string name="rating_string">Ratting : </string>
+     <string name="open_string">Start Time : </string>
+     <string name="end_string">End Time : </string>
++    <string name="name_string">Name : </string>
++    <string name="price_string">Price : </string>
+ </resources>
+\ No newline at end of file
+-- 
+2.32.0.windows.2
+

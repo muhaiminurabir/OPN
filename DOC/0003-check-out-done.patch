@@ -1,0 +1,726 @@
+From 182211f01fed48090af77aa69eb1df73c5f44722 Mon Sep 17 00:00:00 2001
+From: Muhaiminur Rahman <muhaiminurabir@gmail.com>
+Date: Wed, 17 Nov 2021 21:37:34 +0600
+Subject: [PATCH 3/7] check out done:
+
+---
+ .idea/misc.xml                                |   4 +
+ app/src/main/AndroidManifest.xml              |   3 +
+ .../com/misfit/opnmart/adapter/CartAdapter.kt |  60 +++++++
+ .../com/misfit/opnmart/http/ApiService.java   |   9 ++
+ .../com/misfit/opnmart/http/Controller.kt     |   3 +-
+ .../com/misfit/opnmart/model/Productdatum.kt  |   4 +-
+ .../java/com/misfit/opnmart/model/SendCart.kt |  11 ++
+ .../com/misfit/opnmart/utility/Keyword.kt     |  12 ++
+ .../com/misfit/opnmart/view/CheckoutPage.kt   | 151 ++++++++++++++++++
+ .../com/misfit/opnmart/view/DashboaredPage.kt |  28 +++-
+ .../rectangular_black_border_white.xml        |  11 ++
+ .../res/layout/activity_checkout_page.xml     |  49 ++++++
+ app/src/main/res/layout/dialog_toast.xml      |  74 +++++++++
+ app/src/main/res/layout/recycler_cart.xml     |  77 +++++++++
+ app/src/main/res/values/strings.xml           |   6 +
+ build.gradle                                  |   2 +-
+ 16 files changed, 495 insertions(+), 9 deletions(-)
+ create mode 100644 app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/model/SendCart.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/utility/Keyword.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
+ create mode 100644 app/src/main/res/drawable/rectangular_black_border_white.xml
+ create mode 100644 app/src/main/res/layout/activity_checkout_page.xml
+ create mode 100644 app/src/main/res/layout/dialog_toast.xml
+ create mode 100644 app/src/main/res/layout/recycler_cart.xml
+
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index f9308e0..6bd436e 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -5,7 +5,11 @@
+       <map>
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/bg_drop_shadow.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/ic_default.xml" value="0.1" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/rectangular_black_border_white.xml" value="0.1" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_checkout_page.xml" value="0.25" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_dashboredpage.xml" value="0.25" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/dialog_toast.xml" value="0.1" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_cart.xml" value="0.15" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_product.xml" value="0.12" />
+       </map>
+     </option>
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index c3a76c4..b25248c 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -12,6 +12,9 @@
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
+         android:theme="@style/Theme.OPNMart">
++        <activity
++            android:name=".view.CheckoutPage"
++            android:exported="false" />
+         <activity
+             android:name=".view.DashboaredPage"
+             android:exported="true">
+diff --git a/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt b/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
+new file mode 100644
+index 0000000..816ad26
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
+@@ -0,0 +1,60 @@
++package com.misfit.opnmart.adapter
++
++import android.content.Context
++import android.util.Log
++import android.view.LayoutInflater
++import android.view.ViewGroup
++import androidx.databinding.DataBindingUtil
++import androidx.recyclerview.widget.RecyclerView
++import com.bumptech.glide.Glide
++import com.misfit.opnmart.R
++import com.misfit.opnmart.databinding.RecyclerCartBinding
++import com.misfit.opnmart.databinding.RecyclerProductBinding
++import com.misfit.opnmart.model.Productdatum
++import com.misfit.opnmart.utility.ProductClickListener
++import com.misfit.opnmart.view.DashboaredPage
++
++class CartAdapter(to: List<Productdatum>?, c: Context?, proClickListener: ProductClickListener) :
++    RecyclerView.Adapter<CartAdapter.Todo_View_Holder>() {
++    private var context: Context? = c
++    private var list: List<Productdatum>? = to
++    private var click: ProductClickListener? = proClickListener
++
++
++    class Todo_View_Holder(view: RecyclerCartBinding) :
++        RecyclerView.ViewHolder(view.getRoot()) {
++        var productBinding: RecyclerCartBinding = view
++        fun bind(s: Productdatum?) {
++            productBinding.setProduct(s)
++            productBinding.executePendingBindings()
++        }
++
++    }
++
++    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Todo_View_Holder {
++        val binding: RecyclerCartBinding = DataBindingUtil.inflate(
++            LayoutInflater.from(parent.context),
++            R.layout.recycler_cart,
++            parent,
++            false
++        )
++        return Todo_View_Holder(binding)
++    }
++
++    override fun onBindViewHolder(holder: Todo_View_Holder, position: Int) {
++        val bodyResponse: Productdatum = list!![position]
++        try {
++            holder.bind(bodyResponse)
++            Glide.with(context!!)
++                .load(bodyResponse.imageUrl.toString())
++                .into(holder.productBinding.cartImage)
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e))
++        }
++    }
++
++    override fun getItemCount(): Int {
++        return list!!.size
++    }
++
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/http/ApiService.java b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+index b449b0b..edb8f4f 100644
+--- a/app/src/main/java/com/misfit/opnmart/http/ApiService.java
++++ b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+@@ -1,7 +1,9 @@
+ package com.misfit.opnmart.http;
+ 
+ import com.google.gson.JsonElement;
++import com.google.gson.JsonObject;
+ import com.misfit.opnmart.model.Productdatum;
++import com.misfit.opnmart.model.SendCart;
+ import com.misfit.opnmart.model.Storedata;
+ 
+ import java.util.HashMap;
+@@ -13,6 +15,7 @@ import okhttp3.MultipartBody;
+ import okhttp3.RequestBody;
+ import retrofit2.Call;
+ import retrofit2.http.Body;
++import retrofit2.http.FormUrlEncoded;
+ import retrofit2.http.GET;
+ import retrofit2.http.Header;
+ import retrofit2.http.Headers;
+@@ -31,4 +34,10 @@ public interface ApiService {
+     @Headers({"Content-Type:application/json", "Accept: application/json"})
+     @GET("products")
+     Call<List<Productdatum>> get_productlist();
++
++    //3 get checkout information
++    //@FormUrlEncoded
++    @Headers({"Content-Type:application/json", "Accept: application/json"})
++    @POST("order")
++    Call<Void> send_checkout(@Body HashMap sendCart);
+ }
+diff --git a/app/src/main/java/com/misfit/opnmart/http/Controller.kt b/app/src/main/java/com/misfit/opnmart/http/Controller.kt
+index d7f84c5..ec18fd9 100644
+--- a/app/src/main/java/com/misfit/opnmart/http/Controller.kt
++++ b/app/src/main/java/com/misfit/opnmart/http/Controller.kt
+@@ -8,7 +8,8 @@ import okhttp3.OkHttpClient
+ class Controller {
+     companion object {
+ 
+-        var BASE_URL = "https://c8d92d0a-6233-4ef7-a229-5a91deb91ea1.mock.pstmn.io/"
++        //var BASE_URL = "https://c8d92d0a-6233-4ef7-a229-5a91deb91ea1.mock.pstmn.io/"
++        var BASE_URL = "https://virtserver.swaggerhub.com/m-tul/opn-mobile-challenge-api/1.0.0/"
+         var httpClient = OkHttpClient.Builder()
+         fun create(): ApiService {
+ 
+diff --git a/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt b/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
+index e0b7e26..b38573b 100644
+--- a/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
++++ b/app/src/main/java/com/misfit/opnmart/model/Productdatum.kt
+@@ -1,9 +1,9 @@
+ package com.misfit.opnmart.model
+ 
+ import com.google.gson.annotations.SerializedName
+-
++import java.io.Serializable
+ data class Productdatum(
+     @SerializedName("name") val name: String,
+     @SerializedName("price") val price: Int,
+     @SerializedName("imageUrl") val imageUrl: String
+-)
++) : Serializable
+diff --git a/app/src/main/java/com/misfit/opnmart/model/SendCart.kt b/app/src/main/java/com/misfit/opnmart/model/SendCart.kt
+new file mode 100644
+index 0000000..6eae29b
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/model/SendCart.kt
+@@ -0,0 +1,11 @@
++package com.misfit.opnmart.model
++
++import com.google.gson.annotations.SerializedName
++
++data class SendCart(
++    @SerializedName("products")
++    val products: List<Productdatum>? = null,
++
++    @SerializedName("delivery_address")
++    val deliveryAddress: String? = null
++)
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/utility/Keyword.kt b/app/src/main/java/com/misfit/opnmart/utility/Keyword.kt
+new file mode 100644
+index 0000000..5514907
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/utility/Keyword.kt
+@@ -0,0 +1,12 @@
++package com.misfit.opnmart.utility
++
++class Keyword {
++    companion object {
++        const val CARTPAGE = "CHECKOUT"
++        const val SCREEN_WIDTH = "width"
++        const val SCREEN_HEIGHT = "height"
++        const val SCREEN_DENSITY = "density"
++
++    }
++
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt b/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
+new file mode 100644
+index 0000000..fa3480d
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
+@@ -0,0 +1,151 @@
++package com.misfit.opnmart.view
++
++import android.app.Activity
++import android.app.Dialog
++import android.content.Context
++import android.content.Intent
++import android.os.Bundle
++import android.util.DisplayMetrics
++import android.util.Log
++import android.view.Window
++import android.widget.Button
++import android.widget.LinearLayout
++import android.widget.TextView
++import androidx.appcompat.app.AppCompatActivity
++import androidx.recyclerview.widget.DefaultItemAnimator
++import androidx.recyclerview.widget.LinearLayoutManager
++import com.google.gson.Gson
++import com.misfit.opnmart.R
++import com.misfit.opnmart.adapter.CartAdapter
++import com.misfit.opnmart.databinding.ActivityCheckoutPageBinding
++import com.misfit.opnmart.http.Controller
++import com.misfit.opnmart.model.Productdatum
++import com.misfit.opnmart.model.SendCart
++import com.misfit.opnmart.utility.Keyword
++import com.misfit.opnmart.utility.ProductClickListener
++import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
++import retrofit2.Call
++import retrofit2.Callback
++import retrofit2.Response
++import java.util.*
++import kotlin.collections.HashMap
++
++class CheckoutPage : AppCompatActivity(), ProductClickListener {
++    private val apiInterface = Controller.create()
++    var adapter: CartAdapter? = null
++    var list = ArrayList<Productdatum>()
++    var context: Context? = null
++    private lateinit var binding: ActivityCheckoutPageBinding
++    var price: Int = 0
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        binding = ActivityCheckoutPageBinding.inflate(layoutInflater)
++        setContentView(binding.root)
++        try {
++            context = this
++            val b = intent.extras
++            if (b != null && b.containsKey(Keyword.CARTPAGE)) {
++                list = b.getSerializable(Keyword.CARTPAGE) as ArrayList<Productdatum>
++                initial_list()
++            }
++            val factory = ProductViewmodelFactory()
++            //viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
++            binding.checkoutOrderplace.setOnClickListener {
++                sendOrder(SendCart(list, "abir"))
++            }
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e));
++        }
++    }
++
++    private fun initial_list() {
++        adapter = CartAdapter(list, context, this)
++        binding.checkoutProductlist.layoutManager = LinearLayoutManager(this)
++        binding.checkoutProductlist.itemAnimator = DefaultItemAnimator()
++        binding.checkoutProductlist.adapter = adapter
++        price = 0
++        for (cart in list) {
++            price = price + cart.price
++        }
++        binding.checkoutTotal.setText(
++            StringBuilder(context?.resources?.getText(R.string.totalprice_string)).append(
++                price.toString()
++            )
++        )
++    }
++
++    fun sendOrder(cart: SendCart) {
++        val gson = Gson()
++        val cartlist: String = gson.toJson(list)
++        val jsonParams = HashMap<String, Any>()
++        jsonParams.put("products", cartlist)
++        jsonParams.put("delivery_address", "abir")
++        Log.d("cart", jsonParams.toString())
++        val call = apiInterface.send_checkout(jsonParams)
++        call.enqueue(object : Callback<Void> {
++            override fun onResponse(call: Call<Void>, response: Response<Void>) {
++                Log.d("ab", response.toString())
++                if (response.isSuccessful && response.code() == 201) {
++                    Log.d("ab", response.body().toString())
++                    showDialog(context?.resources?.getString(R.string.suc_string), 1)
++                } else {
++                    Log.d("ab", response.errorBody().toString())
++                    showDialog(context?.resources?.getString(R.string.try_string), 2)
++                }
++
++            }
++
++            override fun onFailure(call: Call<Void>, t: Throwable) {
++                Log.d("On Failure to hit api", t.toString())
++            }
++        })
++    }
++
++    override fun onproductClickListener(data: Productdatum) {
++
++    }
++
++    fun showDialog(message: String?, i: Int) {
++        val screen: java.util.HashMap<String, Int> = getScreenRes()!!
++        val width = screen[Keyword.SCREEN_WIDTH]!!
++        val height = screen[Keyword.SCREEN_HEIGHT]!!
++        val mywidth = width / 10 * 9
++        val dialog = Dialog(context!!)
++        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
++        dialog.window!!.setBackgroundDrawableResource(android.R.color.transparent)
++        dialog.setContentView(R.layout.dialog_toast)
++        val tvMessage = dialog.findViewById<TextView>(R.id.tv_message)
++        val btnOk = dialog.findViewById<Button>(R.id.btn_ok)
++        tvMessage.text = message
++        val ll = dialog.findViewById<LinearLayout>(R.id.dialog_layout_size)
++        val params = ll.layoutParams as LinearLayout.LayoutParams
++        params.height = LinearLayout.LayoutParams.WRAP_CONTENT
++        params.width = mywidth
++        ll.layoutParams = params
++        btnOk.setOnClickListener {
++            dialog.dismiss()
++            if (i == 1) {
++                val i = baseContext.packageManager
++                    .getLaunchIntentForPackage(baseContext.packageName)
++                i!!.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
++                startActivity(i)
++                finish()
++            }
++        }
++        dialog.setCancelable(false)
++        dialog.show()
++    }
++
++    fun getScreenRes(): java.util.HashMap<String, Int>? {
++        val map = java.util.HashMap<String, Int>()
++        val metrics = DisplayMetrics()
++        (context as Activity).windowManager.defaultDisplay.getMetrics(metrics)
++        val width = metrics.widthPixels
++        val height = metrics.heightPixels
++        map[Keyword.SCREEN_WIDTH] = width
++        map[Keyword.SCREEN_HEIGHT] = height
++        map[Keyword.SCREEN_DENSITY] = metrics.density.toInt()
++        return map
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+index d21964f..1c07f2c 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+@@ -1,7 +1,9 @@
+ package com.misfit.opnmart.view
+ 
+ import android.content.Context
++import android.content.Intent
+ import android.os.Bundle
++import android.provider.AlarmClock.EXTRA_MESSAGE
+ import android.util.Log
+ import androidx.appcompat.app.AppCompatActivity
+ import androidx.lifecycle.ViewModelProvider
+@@ -12,6 +14,7 @@ import com.misfit.opnmart.adapter.ProductAdapter
+ import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
+ import com.misfit.opnmart.http.Controller
+ import com.misfit.opnmart.model.Productdatum
++import com.misfit.opnmart.utility.Keyword
+ import com.misfit.opnmart.utility.ProductClickListener
+ import com.misfit.opnmart.viewmodel.ProductViewmodel
+ import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
+@@ -23,7 +26,9 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+ 
+     var adapter: ProductAdapter? = null
+     var list = ArrayList<Productdatum>()
++    var cartlist = ArrayList<Productdatum>()
+     var context: Context? = null
++    var price: Int = 0
+ 
+     private lateinit var viewModel: ProductViewmodel
+ 
+@@ -31,10 +36,21 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+         super.onCreate(savedInstanceState)
+         binding = ActivityDashboredpageBinding.inflate(layoutInflater)
+         setContentView(binding.root)
+-        context = this
+-        val factory = ProductViewmodelFactory()
+-        viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+-        initial_list()
++        try {
++            context = this
++            val factory = ProductViewmodelFactory()
++            viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
++            initial_list()
++            binding.storeOrderplace.setOnClickListener {
++                var extras = Bundle()
++                extras.putSerializable(Keyword.CARTPAGE, cartlist)
++                val intent = Intent(this, CheckoutPage::class.java)
++                intent.putExtras(extras)
++                startActivity(intent)
++            }
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e));
++        }
+     }
+ 
+     fun observer() {
+@@ -53,7 +69,9 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+         })
+         viewModel.catlist.observe(this, androidx.lifecycle.Observer {
+             if (it != null) {
+-                var price: Int = 0
++                cartlist.clear()
++                cartlist.addAll(it)
++                price = 0
+                 for (cart in it) {
+                     price = price + cart.price
+                 }
+diff --git a/app/src/main/res/drawable/rectangular_black_border_white.xml b/app/src/main/res/drawable/rectangular_black_border_white.xml
+new file mode 100644
+index 0000000..76a7763
+--- /dev/null
++++ b/app/src/main/res/drawable/rectangular_black_border_white.xml
+@@ -0,0 +1,11 @@
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <gradient
++        android:angle="270"
++        android:endColor="@color/app_white1"
++        android:startColor="@color/app_white1" />
++    <corners android:radius="5dp" />
++    <stroke
++        android:width=".5dp"
++        android:color="@color/app_black1" />
++</shape>
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/activity_checkout_page.xml b/app/src/main/res/layout/activity_checkout_page.xml
+new file mode 100644
+index 0000000..34aea09
+--- /dev/null
++++ b/app/src/main/res/layout/activity_checkout_page.xml
+@@ -0,0 +1,49 @@
++<?xml version="1.0" encoding="utf-8"?>
++<layout>
++
++    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        xmlns:app="http://schemas.android.com/apk/res-auto"
++        xmlns:tools="http://schemas.android.com/tools"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:orientation="vertical"
++        tools:context=".view.CheckoutPage">
++
++        <androidx.recyclerview.widget.RecyclerView
++            android:id="@+id/checkout_productlist"
++            android:layout_width="match_parent"
++            android:layout_height="0dp"
++            android:layout_margin="15dp"
++            android:layout_weight="1" />
++
++        <View
++            android:layout_width="match_parent"
++            android:layout_height="1dp"
++            android:layout_margin="2dp"
++            android:background="@drawable/bg_drop_shadow" />
++
++        <com.google.android.material.textview.MaterialTextView
++            android:id="@+id/checkout_total"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="3dp"
++            android:padding="5dp"
++            android:textAlignment="textEnd"
++            android:textColor="@color/app_ash4"
++            android:textSize="@dimen/font_big"
++            android:textStyle="normal" />
++
++        <com.google.android.material.button.MaterialButton
++            android:id="@+id/checkout_orderplace"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:background="@color/app_ash4"
++            android:text="@string/order_string"
++            android:textAlignment="center"
++            android:textColor="@color/white"
++            android:textSize="@dimen/font_xl"
++            android:textStyle="bold"
++            app:backgroundTint="@null" />
++    </LinearLayout>
++</layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/dialog_toast.xml b/app/src/main/res/layout/dialog_toast.xml
+new file mode 100644
+index 0000000..595b581
+--- /dev/null
++++ b/app/src/main/res/layout/dialog_toast.xml
+@@ -0,0 +1,74 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:app="http://schemas.android.com/apk/res-auto"
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:background="@drawable/rectangular_black_border_white"
++    android:orientation="vertical"
++    android:padding="5dp">
++
++    <LinearLayout
++        android:id="@+id/dialog_layout_size"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:background="@color/app_white1"
++        android:orientation="vertical"
++        android:padding="5dp">
++
++        <TextView
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginBottom="5dp"
++            android:background="@color/app_ash4"
++            android:gravity="center"
++            android:padding="5dp"
++            android:text="@string/app_name"
++            android:textAlignment="center"
++            android:textColor="@color/app_white1"
++            android:textSize="@dimen/font_extreme"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/tv_message"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginStart="10dp"
++            android:layout_marginTop="10dp"
++            android:layout_marginEnd="10dp"
++            android:layout_marginBottom="5dp"
++            android:gravity="center"
++            android:padding="10dp"
++            android:text=""
++            android:textColor="@color/app_blue1"
++            android:textSize="@dimen/font_big" />
++
++        <View
++            android:layout_width="match_parent"
++            android:layout_height="1dp"
++            android:background="@drawable/bg_drop_shadow" />
++
++        <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:gravity="end"
++            android:orientation="horizontal">
++
++            <com.google.android.material.button.MaterialButton
++                android:id="@+id/btn_ok"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginStart="2.5dp"
++                android:layout_marginTop="5dp"
++                android:layout_marginEnd="10dp"
++                android:layout_marginBottom="10dp"
++                android:background="@color/app_red1"
++                android:gravity="center"
++                android:text="@string/confirm_string"
++                android:textColor="@color/app_white1"
++                android:textSize="@dimen/font_xxxl"
++                android:textStyle="bold"
++                app:backgroundTint="@null" />
++        </LinearLayout>
++    </LinearLayout>
++</LinearLayout>
++
+diff --git a/app/src/main/res/layout/recycler_cart.xml b/app/src/main/res/layout/recycler_cart.xml
+new file mode 100644
+index 0000000..e181578
+--- /dev/null
++++ b/app/src/main/res/layout/recycler_cart.xml
+@@ -0,0 +1,77 @@
++<?xml version="1.0" encoding="utf-8"?>
++<layout xmlns:app="http://schemas.android.com/apk/res-auto">
++
++    <data>
++
++        <variable
++            name="product"
++            type="com.misfit.opnmart.model.Productdatum" />
++    </data>
++
++    <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:layout_marginStart="5dp"
++        android:layout_marginTop="5dp"
++        android:layout_marginEnd="5dp"
++        android:layout_marginBottom="5dp"
++        app:cardCornerRadius="5dp"
++        app:cardElevation="5dp"
++        app:cardMaxElevation="5dp">
++
++        <androidx.constraintlayout.widget.ConstraintLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:orientation="vertical">
++
++            <ImageView
++                android:id="@+id/cart_image"
++                android:layout_width="100dp"
++                android:layout_height="100dp"
++                android:contentDescription="@string/app_name"
++                android:scaleType="fitXY"
++                android:src="@drawable/ic_default"
++                app:layout_constraintEnd_toStartOf="@id/cart_name"
++                app:layout_constraintStart_toStartOf="parent"
++                app:layout_constraintTop_toTopOf="parent" />
++
++            <TextView
++                android:id="@+id/cart_name"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_margin="7dp"
++                android:padding="5dp"
++                android:text="@{@string/name_string.concat(product.name)}"
++                android:textAlignment="textStart"
++                android:textColor="@color/app_ash4"
++                android:textSize="@dimen/font_m"
++                android:textStyle="normal"
++                app:layout_constraintStart_toEndOf="@+id/cart_image"
++                app:layout_constraintTop_toTopOf="parent" />
++
++            <TextView
++                android:id="@+id/cart_price"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_margin="7dp"
++                android:padding="5dp"
++                android:text="@{@string/price_string.concat(product.price+``)}"
++                android:textAlignment="textStart"
++                android:textColor="@color/app_ash4"
++                android:textSize="@dimen/font_m"
++                android:textStyle="normal"
++                app:layout_constraintStart_toEndOf="@+id/cart_image"
++                app:layout_constraintTop_toBottomOf="@+id/cart_name" />
++
++            <View
++                android:id="@+id/cart_view"
++                android:layout_width="match_parent"
++                android:layout_height="1dp"
++                android:layout_margin="2dp"
++                android:background="@drawable/bg_drop_shadow"
++                app:layout_constraintEnd_toStartOf="parent"
++                app:layout_constraintStart_toStartOf="parent"
++                app:layout_constraintTop_toBottomOf="@+id/cart_image" />
++        </androidx.constraintlayout.widget.ConstraintLayout>
++    </androidx.cardview.widget.CardView>
++</layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 1e4e2b0..53cd156 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -9,4 +9,10 @@
+     <string name="addcart_string">Add to Cart</string>
+     <string name="checkout_string">Checkout</string>
+     <string name="item_string">Item Added : </string>
++    <string name="totalprice_string">Total Price : </string>
++    <string name="order_string">Order Place</string>
++    <string name="confirm_string">OK</string>
++    <string name="suc_string">Order Placed</string>
++    <string name="try_string">Try Again Later</string>
++
+ </resources>
+\ No newline at end of file
+diff --git a/build.gradle b/build.gradle
+index d4efb62..0022993 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -6,7 +6,7 @@ buildscript {
+     }
+     dependencies {
+         classpath "com.android.tools.build:gradle:7.0.3"
+-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.31"
++        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.0'
+ 
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+-- 
+2.32.0.windows.2
+

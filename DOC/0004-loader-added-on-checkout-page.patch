@@ -1,0 +1,615 @@
+From 037f67d1e6d5bb8a0537eaabbc71074fda9ad776 Mon Sep 17 00:00:00 2001
+From: Muhaiminur Rahman <muhaiminurabir@gmail.com>
+Date: Thu, 18 Nov 2021 15:09:07 +0600
+Subject: [PATCH 4/7] loader added on checkout page
+
+---
+ .idea/misc.xml                                |   1 +
+ .../com/misfit/opnmart/http/ApiService.java   |  12 --
+ .../com/misfit/opnmart/model/CartResult.kt    |   3 +
+ .../java/com/misfit/opnmart/model/SendCart.kt |  11 --
+ .../com/misfit/opnmart/utility/Utility.kt     | 146 ++++++++++++++++++
+ .../com/misfit/opnmart/view/CheckoutPage.kt   |  80 ++++++----
+ .../com/misfit/opnmart/view/DashboaredPage.kt |   5 +-
+ .../com/misfit/opnmart/view/ProgressDialog.kt |  23 +++
+ .../misfit/opnmart/viewmodel/CartViewmodel.kt |  37 +++++
+ ...iewmodelFactory.kt => ViewmodelFactory.kt} |   5 +-
+ .../res/layout/activity_checkout_page.xml     |  16 ++
+ app/src/main/res/layout/progress.xml          |  24 +++
+ app/src/main/res/values/strings.xml           |   2 +
+ 13 files changed, 305 insertions(+), 60 deletions(-)
+ create mode 100644 app/src/main/java/com/misfit/opnmart/model/CartResult.kt
+ delete mode 100644 app/src/main/java/com/misfit/opnmart/model/SendCart.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/utility/Utility.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
+ rename app/src/main/java/com/misfit/opnmart/viewmodel/{ProductViewmodelFactory.kt => ViewmodelFactory.kt} (68%)
+ create mode 100644 app/src/main/res/layout/progress.xml
+
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index 6bd436e..bfe84b3 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -9,6 +9,7 @@
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_checkout_page.xml" value="0.25" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_dashboredpage.xml" value="0.25" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/dialog_toast.xml" value="0.1" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/progress.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_cart.xml" value="0.15" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_product.xml" value="0.12" />
+       </map>
+diff --git a/app/src/main/java/com/misfit/opnmart/http/ApiService.java b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+index edb8f4f..43d3989 100644
+--- a/app/src/main/java/com/misfit/opnmart/http/ApiService.java
++++ b/app/src/main/java/com/misfit/opnmart/http/ApiService.java
+@@ -1,28 +1,16 @@
+ package com.misfit.opnmart.http;
+ 
+-import com.google.gson.JsonElement;
+-import com.google.gson.JsonObject;
+ import com.misfit.opnmart.model.Productdatum;
+-import com.misfit.opnmart.model.SendCart;
+ import com.misfit.opnmart.model.Storedata;
+ 
+ import java.util.HashMap;
+ import java.util.List;
+-import java.util.Map;
+ 
+-import kotlinx.coroutines.channels.ProduceKt;
+-import okhttp3.MultipartBody;
+-import okhttp3.RequestBody;
+ import retrofit2.Call;
+ import retrofit2.http.Body;
+-import retrofit2.http.FormUrlEncoded;
+ import retrofit2.http.GET;
+-import retrofit2.http.Header;
+ import retrofit2.http.Headers;
+-import retrofit2.http.Multipart;
+ import retrofit2.http.POST;
+-import retrofit2.http.Part;
+-import retrofit2.http.PartMap;
+ 
+ public interface ApiService {
+     //1 get store information
+diff --git a/app/src/main/java/com/misfit/opnmart/model/CartResult.kt b/app/src/main/java/com/misfit/opnmart/model/CartResult.kt
+new file mode 100644
+index 0000000..db5ba7b
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/model/CartResult.kt
+@@ -0,0 +1,3 @@
++package com.misfit.opnmart.model
++
++data class CartResult(val loading: Boolean, val sucess: Boolean)
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/model/SendCart.kt b/app/src/main/java/com/misfit/opnmart/model/SendCart.kt
+deleted file mode 100644
+index 6eae29b..0000000
+--- a/app/src/main/java/com/misfit/opnmart/model/SendCart.kt
++++ /dev/null
+@@ -1,11 +0,0 @@
+-package com.misfit.opnmart.model
+-
+-import com.google.gson.annotations.SerializedName
+-
+-data class SendCart(
+-    @SerializedName("products")
+-    val products: List<Productdatum>? = null,
+-
+-    @SerializedName("delivery_address")
+-    val deliveryAddress: String? = null
+-)
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/utility/Utility.kt b/app/src/main/java/com/misfit/opnmart/utility/Utility.kt
+new file mode 100644
+index 0000000..97615bd
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/utility/Utility.kt
+@@ -0,0 +1,146 @@
++package com.misfit.opnmart.utility
++
++import android.app.Activity
++import android.app.ProgressDialog
++import android.content.Context
++import android.net.ConnectivityManager
++import android.os.StrictMode
++import android.os.StrictMode.ThreadPolicy
++import android.util.DisplayMetrics
++import android.util.Log
++import android.view.View
++import android.view.Window
++import android.view.WindowManager
++import android.view.inputmethod.InputMethodManager
++import android.widget.Button
++import android.widget.EditText
++import android.widget.TextView
++import android.widget.Toast
++import com.misfit.opnmart.R
++import java.text.SimpleDateFormat
++import java.util.*
++
++class Utility {
++    var context: Context? = null
++    var mProgressDialog: ProgressDialog? = null
++
++    fun Utility(context: Context?) {
++        this.context = context
++        val policy = ThreadPolicy.Builder().permitAll().build()
++        StrictMode.setThreadPolicy(policy)
++        freeMemory()
++    }
++
++    //================ Show Progress Dialog ===============
++    fun showProgress(isCancelable: Boolean, message: String?) {
++        hideProgress()
++        mProgressDialog = ProgressDialog(context, R.style.AppCompatAlertDialogStyle)
++        mProgressDialog!!.isIndeterminate = true
++        mProgressDialog!!.setCancelable(isCancelable)
++        mProgressDialog!!.setMessage(message)
++        mProgressDialog!!.show()
++    }
++
++    //================ Hide Progress Dialog ===============
++    fun hideProgress() {
++        try {
++            if (mProgressDialog != null && mProgressDialog!!.isShowing) {
++                mProgressDialog!!.dismiss()
++            }
++        } catch (e: Exception) {
++            Log.d("Error Line Number", Log.getStackTraceString(e))
++        }
++    }
++
++    fun isNetworkAvailable(): Boolean {
++        val manager =
++            context!!.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
++        val info = manager.activeNetworkInfo
++        return info != null && info.isConnected
++    }
++
++
++    /*
++    ================ Show Toast Message ===============
++    */
++    fun showToast(msg: String?) {
++        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
++    }
++
++    /*
++    =============== Set Window FullScreen ===============
++    */
++    fun setFullScreen() {
++        val activity = context as Activity?
++        activity!!.requestWindowFeature(Window.FEATURE_NO_TITLE)
++        activity.window.setFlags(
++            WindowManager.LayoutParams.FLAG_FULLSCREEN,
++            WindowManager.LayoutParams.FLAG_FULLSCREEN
++        )
++    }
++
++    /*
++        ================ Get Screen Width ===============
++        */
++    fun getScreenRes(): HashMap<String, Int>? {
++        val map = HashMap<String, Int>()
++        val metrics = DisplayMetrics()
++        (context as Activity?)!!.windowManager.defaultDisplay.getMetrics(metrics)
++        val width = metrics.widthPixels
++        val height = metrics.heightPixels
++        map[Keyword.SCREEN_WIDTH] = width
++        map[Keyword.SCREEN_HEIGHT] = height
++        map[Keyword.SCREEN_DENSITY] = metrics.density.toInt()
++        return map
++    }
++
++
++    /*
++    ================ Log function ===============
++     */
++    fun logger(message: String?) {
++        Log.d(context!!.getString(R.string.app_name), message!!)
++        val currentTime = System.currentTimeMillis()
++        val sdf = SimpleDateFormat("MM/dd/yyyy hh:mm:ss")
++        val date = sdf.format(Date())
++        //writeToFile(date+" -> "+message);
++    }
++
++    /*
++    ================ Clear Text for EditText, Button, TextView ===============
++    */
++    fun clearText(view: Array<View?>) {
++        for (v in view) {
++            if (v is EditText) {
++                v.setText("")
++            } else if (v is Button) {
++                v.text = ""
++            } else if (v is TextView) {
++                v.text = ""
++            }
++        }
++    }
++
++    /*
++    ================ Hide Keyboard from Screen ===============
++    */
++    fun hideKeyboard(view: View) {
++        val imm = context!!.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
++        imm.hideSoftInputFromWindow(view.windowToken, 0)
++    }
++
++
++    /*
++    ================ Show Keyboard to Screen ===============
++    */
++    fun showKeyboard() {
++        val imm = context!!.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
++        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
++    }
++
++    fun freeMemory() {
++        System.runFinalization()
++        Runtime.getRuntime().gc()
++        System.gc()
++    }
++}
+diff --git a/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt b/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
+index fa3480d..a264129 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/CheckoutPage.kt
+@@ -5,55 +5,62 @@ import android.app.Dialog
+ import android.content.Context
+ import android.content.Intent
+ import android.os.Bundle
++import android.text.TextUtils
+ import android.util.DisplayMetrics
+ import android.util.Log
+ import android.view.Window
+ import android.widget.Button
+ import android.widget.LinearLayout
+ import android.widget.TextView
++import androidx.appcompat.app.AlertDialog
+ import androidx.appcompat.app.AppCompatActivity
++import androidx.lifecycle.ViewModelProvider
+ import androidx.recyclerview.widget.DefaultItemAnimator
+ import androidx.recyclerview.widget.LinearLayoutManager
+ import com.google.gson.Gson
+ import com.misfit.opnmart.R
+ import com.misfit.opnmart.adapter.CartAdapter
+ import com.misfit.opnmart.databinding.ActivityCheckoutPageBinding
+-import com.misfit.opnmart.http.Controller
+ import com.misfit.opnmart.model.Productdatum
+-import com.misfit.opnmart.model.SendCart
+ import com.misfit.opnmart.utility.Keyword
+ import com.misfit.opnmart.utility.ProductClickListener
+-import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
+-import retrofit2.Call
+-import retrofit2.Callback
+-import retrofit2.Response
++import com.misfit.opnmart.viewmodel.CartViewmodel
++import com.misfit.opnmart.viewmodel.ViewmodelFactory
+ import java.util.*
+ import kotlin.collections.HashMap
+ 
++
+ class CheckoutPage : AppCompatActivity(), ProductClickListener {
+-    private val apiInterface = Controller.create()
+     var adapter: CartAdapter? = null
+     var list = ArrayList<Productdatum>()
+     var context: Context? = null
+     private lateinit var binding: ActivityCheckoutPageBinding
+     var price: Int = 0
++    private lateinit var viewModel: CartViewmodel
++    val dialog = ProgressDialog()
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         binding = ActivityCheckoutPageBinding.inflate(layoutInflater)
+         setContentView(binding.root)
+         try {
++            dialog.isCancelable = false
+             context = this
+             val b = intent.extras
++            val factory = ViewmodelFactory()
++            viewModel = ViewModelProvider(this, factory).get(CartViewmodel::class.java)
+             if (b != null && b.containsKey(Keyword.CARTPAGE)) {
+                 list = b.getSerializable(Keyword.CARTPAGE) as ArrayList<Productdatum>
++                binding.checkoutOrderplace.setOnClickListener {
++                    if (!TextUtils.isEmpty(binding.checkoutAddress.text.toString())) {
++                        sendOrder(binding.checkoutAddress.text.toString())
++                    } else {
++                        binding.checkoutAddress.setError(getResources().getString(R.string.address_string));
++                        binding.checkoutAddress.requestFocusFromTouch();
++                    }
++                }
+                 initial_list()
+             }
+-            val factory = ProductViewmodelFactory()
+-            //viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+-            binding.checkoutOrderplace.setOnClickListener {
+-                sendOrder(SendCart(list, "abir"))
+-            }
+         } catch (e: Exception) {
+             Log.d("Error Line Number", Log.getStackTraceString(e));
+         }
+@@ -64,7 +71,6 @@ class CheckoutPage : AppCompatActivity(), ProductClickListener {
+         binding.checkoutProductlist.layoutManager = LinearLayoutManager(this)
+         binding.checkoutProductlist.itemAnimator = DefaultItemAnimator()
+         binding.checkoutProductlist.adapter = adapter
+-        price = 0
+         for (cart in list) {
+             price = price + cart.price
+         }
+@@ -73,33 +79,34 @@ class CheckoutPage : AppCompatActivity(), ProductClickListener {
+                 price.toString()
+             )
+         )
++        observer()
++    }
++
++    fun observer() {
++        viewModel.progressbarObservable.observe(this, androidx.lifecycle.Observer {
++            if (it != null) {
++                if (it.loading) {
++                    showNoticeDialog(true)
++                } else {
++                    showNoticeDialog(false)
++                    if (!it.loading && it.sucess) {
++                        showDialog(context?.resources?.getString(R.string.suc_string), 1)
++                    } else if (!it.loading && !it.sucess) {
++                        showDialog(context?.resources?.getString(R.string.try_string), 2)
++                    }
++                }
++            }
++        })
+     }
+ 
+-    fun sendOrder(cart: SendCart) {
++    fun sendOrder(address: String) {
+         val gson = Gson()
+         val cartlist: String = gson.toJson(list)
+         val jsonParams = HashMap<String, Any>()
+         jsonParams.put("products", cartlist)
+-        jsonParams.put("delivery_address", "abir")
++        jsonParams.put("delivery_address", address)
+         Log.d("cart", jsonParams.toString())
+-        val call = apiInterface.send_checkout(jsonParams)
+-        call.enqueue(object : Callback<Void> {
+-            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+-                Log.d("ab", response.toString())
+-                if (response.isSuccessful && response.code() == 201) {
+-                    Log.d("ab", response.body().toString())
+-                    showDialog(context?.resources?.getString(R.string.suc_string), 1)
+-                } else {
+-                    Log.d("ab", response.errorBody().toString())
+-                    showDialog(context?.resources?.getString(R.string.try_string), 2)
+-                }
+-
+-            }
+-
+-            override fun onFailure(call: Call<Void>, t: Throwable) {
+-                Log.d("On Failure to hit api", t.toString())
+-            }
+-        })
++        viewModel.create_order(jsonParams)
+     }
+ 
+     override fun onproductClickListener(data: Productdatum) {
+@@ -148,4 +155,11 @@ class CheckoutPage : AppCompatActivity(), ProductClickListener {
+         map[Keyword.SCREEN_DENSITY] = metrics.density.toInt()
+         return map
+     }
++    fun showNoticeDialog(show: Boolean) {
++        if (show) {
++            dialog.show(supportFragmentManager, "NoticeDialogFragment")
++        } else {
++            dialog.dismiss()
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+index 1c07f2c..b55d531 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+@@ -3,7 +3,6 @@ package com.misfit.opnmart.view
+ import android.content.Context
+ import android.content.Intent
+ import android.os.Bundle
+-import android.provider.AlarmClock.EXTRA_MESSAGE
+ import android.util.Log
+ import androidx.appcompat.app.AppCompatActivity
+ import androidx.lifecycle.ViewModelProvider
+@@ -17,7 +16,7 @@ import com.misfit.opnmart.model.Productdatum
+ import com.misfit.opnmart.utility.Keyword
+ import com.misfit.opnmart.utility.ProductClickListener
+ import com.misfit.opnmart.viewmodel.ProductViewmodel
+-import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
++import com.misfit.opnmart.viewmodel.ViewmodelFactory
+ import java.util.*
+ 
+ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+@@ -38,7 +37,7 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+         setContentView(binding.root)
+         try {
+             context = this
+-            val factory = ProductViewmodelFactory()
++            val factory = ViewmodelFactory()
+             viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+             initial_list()
+             binding.storeOrderplace.setOnClickListener {
+diff --git a/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt b/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
+new file mode 100644
+index 0000000..3120855
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
+@@ -0,0 +1,23 @@
++package com.misfit.opnmart.view
++
++import android.app.Dialog
++import android.os.Bundle
++import androidx.appcompat.app.AlertDialog
++import androidx.fragment.app.DialogFragment
++import com.misfit.opnmart.R
++
++class ProgressDialog : DialogFragment() {
++    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
++        return activity?.let {
++            // Use the Builder class for convenient dialog construction
++            val builder = AlertDialog.Builder(it)
++            // Create the AlertDialog object and return it
++            val inflater = requireActivity().layoutInflater;
++
++            // Inflate and set the layout for the dialog
++            // Pass null as the parent view because its going in the dialog layout
++            builder.setView(inflater.inflate(R.layout.progress, null))
++            builder.create()
++        } ?: throw IllegalStateException("Activity cannot be null")
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
+new file mode 100644
+index 0000000..404bdf7
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
+@@ -0,0 +1,37 @@
++package com.misfit.opnmart.viewmodel
++
++import android.util.Log
++import androidx.lifecycle.MutableLiveData
++import androidx.lifecycle.ViewModel
++import com.misfit.opnmart.http.Controller
++import com.misfit.opnmart.model.CartResult
++import retrofit2.Call
++import retrofit2.Callback
++import retrofit2.Response
++
++class CartViewmodel : ViewModel() {
++    private val apiInterface = Controller.create()
++    var progressbarObservable = MutableLiveData<CartResult>()
++
++    fun create_order(hash: HashMap<String, Any>) {
++        Log.d("ab", "pasisi")
++        progressbarObservable.postValue(CartResult(true, false))
++        val call = apiInterface.send_checkout(hash)
++        call.enqueue(object : Callback<Void> {
++            override fun onResponse(call: Call<Void>, response: Response<Void>) {
++                Log.d("Create Order", response.toString())
++                if (response.isSuccessful && response.code() == 201) {
++                    Log.d("Create Order", response.body().toString())
++                    progressbarObservable.postValue(CartResult(false, true))
++                } else {
++                    Log.d("Create Order", response.errorBody().toString())
++                }
++            }
++
++            override fun onFailure(call: Call<Void>, t: Throwable) {
++                progressbarObservable.postValue(CartResult(false, false))
++                Log.d("On Failure to hit api", t.toString())
++            }
++        })
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/ViewmodelFactory.kt
+similarity index 68%
+rename from app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt
+rename to app/src/main/java/com/misfit/opnmart/viewmodel/ViewmodelFactory.kt
+index c512d3a..b11658d 100644
+--- a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/ViewmodelFactory.kt
+@@ -3,11 +3,14 @@ package com.misfit.opnmart.viewmodel
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.ViewModelProvider
+ 
+-class ProductViewmodelFactory : ViewModelProvider.Factory {
++class ViewmodelFactory : ViewModelProvider.Factory {
+     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+         if (modelClass.isAssignableFrom(ProductViewmodel::class.java)) {
+             return ProductViewmodel() as T
+         }
++        if (modelClass.isAssignableFrom(CartViewmodel::class.java)) {
++            return CartViewmodel() as T
++        }
+         throw IllegalArgumentException("UnknownViewModel")
+     }
+ 
+diff --git a/app/src/main/res/layout/activity_checkout_page.xml b/app/src/main/res/layout/activity_checkout_page.xml
+index 34aea09..0658c7a 100644
+--- a/app/src/main/res/layout/activity_checkout_page.xml
++++ b/app/src/main/res/layout/activity_checkout_page.xml
+@@ -22,6 +22,22 @@
+             android:layout_margin="2dp"
+             android:background="@drawable/bg_drop_shadow" />
+ 
++        <com.google.android.material.textfield.TextInputLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="3dp">
++
++            <com.google.android.material.textfield.TextInputEditText
++                android:id="@+id/checkout_address"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:hint="@string/address_string"
++                android:inputType="textPostalAddress"
++                android:maxLines="1"
++                android:textColorHint="@color/app_ash4" />
++
++        </com.google.android.material.textfield.TextInputLayout>
++
+         <com.google.android.material.textview.MaterialTextView
+             android:id="@+id/checkout_total"
+             android:layout_width="match_parent"
+diff --git a/app/src/main/res/layout/progress.xml b/app/src/main/res/layout/progress.xml
+new file mode 100644
+index 0000000..56cff94
+--- /dev/null
++++ b/app/src/main/res/layout/progress.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_width="wrap_content"
++    android:layout_height="wrap_content"
++    android:layout_centerHorizontal="true"
++    android:orientation="horizontal"
++    android:padding="13dp">
++
++    <ProgressBar
++        android:id="@+id/loader"
++        android:layout_width="45dp"
++        android:layout_height="45dp"
++        android:layout_marginEnd="5dp"
++        android:indeterminate="true" />
++
++    <TextView
++        android:id="@+id/loading_msg"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_gravity="center_vertical"
++        android:text="@string/load_name"
++        android:textAppearance="?android:textAppearanceSmall" />
++
++</LinearLayout>
+\ No newline at end of file
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 53cd156..008531c 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -1,5 +1,6 @@
+ <resources>
+     <string name="app_name">OPN Mart</string>
++    <string name="load_name">Loading</string>
+     <string name="store_string">Store Name : </string>
+     <string name="rating_string">Ratting : </string>
+     <string name="open_string">Start Time : </string>
+@@ -14,5 +15,6 @@
+     <string name="confirm_string">OK</string>
+     <string name="suc_string">Order Placed</string>
+     <string name="try_string">Try Again Later</string>
++    <string name="address_string">Enter Delivery Address</string>
+ 
+ </resources>
+\ No newline at end of file
+-- 
+2.32.0.windows.2
+

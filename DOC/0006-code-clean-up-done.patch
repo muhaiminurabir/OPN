@@ -1,0 +1,250 @@
+From 56c62ab58be90b5720b249c74d5e890d8e8ef2ba Mon Sep 17 00:00:00 2001
+From: Muhaiminur Rahman <muhaiminurabir@gmail.com>
+Date: Thu, 18 Nov 2021 16:15:42 +0600
+Subject: [PATCH 6/7] code clean up done
+
+---
+ .../com/misfit/opnmart/adapter/CartAdapter.kt |  2 +-
+ .../misfit/opnmart/adapter/ProductAdapter.kt  |  4 +-
+ .../com/misfit/opnmart/view/DashboaredPage.kt | 57 ++++++++++---------
+ .../com/misfit/opnmart/view/ProgressDialog.kt |  2 +-
+ .../misfit/opnmart/viewmodel/CartViewmodel.kt |  9 ++-
+ .../opnmart/viewmodel/ProductViewmodel.kt     |  6 +-
+ app/src/main/res/values/strings.xml           |  2 +-
+ 7 files changed, 42 insertions(+), 40 deletions(-)
+
+diff --git a/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt b/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
+index 54a86c4..31d4f5a 100644
+--- a/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
++++ b/app/src/main/java/com/misfit/opnmart/adapter/CartAdapter.kt
+@@ -18,7 +18,7 @@ class CartAdapter(to: List<Productdatum>?, c: Context?) :
+ 
+ 
+     class Todo_View_Holder(view: RecyclerCartBinding) :
+-        RecyclerView.ViewHolder(view.getRoot()) {
++        RecyclerView.ViewHolder(view.root) {
+         var productBinding: RecyclerCartBinding = view
+         fun bind(s: Productdatum?) {
+             productBinding.product = s
+diff --git a/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+index 5907877..336ce23 100644
+--- a/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
++++ b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+@@ -20,10 +20,10 @@ class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: Pro
+ 
+ 
+     class Todo_View_Holder(view: RecyclerProductBinding) :
+-        RecyclerView.ViewHolder(view.getRoot()) {
++        RecyclerView.ViewHolder(view.root) {
+         var productBinding: RecyclerProductBinding = view
+         fun bind(s: Productdatum?) {
+-            productBinding.setProduct(s)
++            productBinding.product = s
+             productBinding.executePendingBindings()
+         }
+ 
+diff --git a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+index b55d531..2303547 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+@@ -11,23 +11,23 @@ import androidx.recyclerview.widget.GridLayoutManager
+ import com.misfit.opnmart.R
+ import com.misfit.opnmart.adapter.ProductAdapter
+ import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
+-import com.misfit.opnmart.http.Controller
+ import com.misfit.opnmart.model.Productdatum
+ import com.misfit.opnmart.utility.Keyword
+ import com.misfit.opnmart.utility.ProductClickListener
++import com.misfit.opnmart.utility.Utility
+ import com.misfit.opnmart.viewmodel.ProductViewmodel
+ import com.misfit.opnmart.viewmodel.ViewmodelFactory
+ import java.util.*
+ 
+ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+     private lateinit var binding: ActivityDashboredpageBinding
+-    private val apiInterface = Controller.create()
++    private var adapter: ProductAdapter? = null
++    private var list = ArrayList<Productdatum>()
++    private var cartList = ArrayList<Productdatum>()
++    private var context: Context? = null
++    private var price: Int = 0
++    private lateinit var utility: Utility
+ 
+-    var adapter: ProductAdapter? = null
+-    var list = ArrayList<Productdatum>()
+-    var cartlist = ArrayList<Productdatum>()
+-    var context: Context? = null
+-    var price: Int = 0
+ 
+     private lateinit var viewModel: ProductViewmodel
+ 
+@@ -37,23 +37,30 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+         setContentView(binding.root)
+         try {
+             context = this
++            utility = Utility(this)
+             val factory = ViewmodelFactory()
+             viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+-            initial_list()
++            initialList()
+             binding.storeOrderplace.setOnClickListener {
+-                var extras = Bundle()
+-                extras.putSerializable(Keyword.CARTPAGE, cartlist)
+-                val intent = Intent(this, CheckoutPage::class.java)
+-                intent.putExtras(extras)
+-                startActivity(intent)
++                if (cartList.size > 0) {
++                    val extras = Bundle()
++                    extras.putSerializable(Keyword.CARTPAGE, cartList)
++                    val intent = Intent(this, CheckoutPage::class.java)
++                    intent.putExtras(extras)
++                    startActivity(intent)
++                } else {
++                    utility.showToast(
++                        resources.getString(R.string.cart_string)
++                    )
++                }
+             }
+         } catch (e: Exception) {
+-            Log.d("Error Line Number", Log.getStackTraceString(e));
++            Log.d("Error Line Number", Log.getStackTraceString(e))
+         }
+     }
+ 
+-    fun observer() {
+-        viewModel.productlst.observe(this, androidx.lifecycle.Observer {
++    private fun observer() {
++        viewModel.productlst.observe(this, {
+             if (it != null) {
+                 Log.d("list", it.toString())
+                 list.clear()
+@@ -61,26 +68,26 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+                 adapter!!.notifyDataSetChanged()
+             }
+         })
+-        viewModel.storeinfo.observe(this, androidx.lifecycle.Observer {
++        viewModel.storeinfo.observe(this, {
+             if (it != null) {
+                 binding.store = it
+             }
+         })
+-        viewModel.catlist.observe(this, androidx.lifecycle.Observer {
++        viewModel.catlist.observe(this, {
+             if (it != null) {
+-                cartlist.clear()
+-                cartlist.addAll(it)
++                cartList.clear()
++                cartList.addAll(it)
+                 price = 0
+                 for (cart in it) {
+-                    price = price + cart.price
++                    price += cart.price
+                 }
+                 binding.storeSubtotal.text =
+-                    StringBuilder(context?.resources?.getText(R.string.item_string)).append(price.toString())
++                    StringBuilder(resources.getString(R.string.item_string)).append(price.toString())
+             }
+         })
+     }
+ 
+-    private fun initial_list() {
++    private fun initialList() {
+         try {
+             adapter = ProductAdapter(list, context, this)
+             binding.storeProductlist.layoutManager = GridLayoutManager(this, 2)
+@@ -94,10 +101,6 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
+         }
+     }
+ 
+-    fun addtocart(unit: Int) {
+-
+-    }
+-
+     override fun onproductClickListener(data: Productdatum) {
+         viewModel.add_to_cart(data)
+     }
+diff --git a/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt b/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
+index 3120855..a5e2f7e 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/ProgressDialog.kt
+@@ -12,7 +12,7 @@ class ProgressDialog : DialogFragment() {
+             // Use the Builder class for convenient dialog construction
+             val builder = AlertDialog.Builder(it)
+             // Create the AlertDialog object and return it
+-            val inflater = requireActivity().layoutInflater;
++            val inflater = requireActivity().layoutInflater
+ 
+             // Inflate and set the layout for the dialog
+             // Pass null as the parent view because its going in the dialog layout
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
+index 404bdf7..2a08935 100644
+--- a/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/CartViewmodel.kt
+@@ -14,22 +14,21 @@ class CartViewmodel : ViewModel() {
+     var progressbarObservable = MutableLiveData<CartResult>()
+ 
+     fun create_order(hash: HashMap<String, Any>) {
+-        Log.d("ab", "pasisi")
+-        progressbarObservable.postValue(CartResult(true, false))
++        progressbarObservable.postValue(CartResult(loading = true, sucess = false))
+         val call = apiInterface.send_checkout(hash)
+         call.enqueue(object : Callback<Void> {
+             override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                 Log.d("Create Order", response.toString())
+                 if (response.isSuccessful && response.code() == 201) {
+-                    Log.d("Create Order", response.body().toString())
+-                    progressbarObservable.postValue(CartResult(false, true))
++                    //Log.d("Create Order", response.body().toString())
++                    progressbarObservable.postValue(CartResult(loading = false, sucess = true))
+                 } else {
+                     Log.d("Create Order", response.errorBody().toString())
+                 }
+             }
+ 
+             override fun onFailure(call: Call<Void>, t: Throwable) {
+-                progressbarObservable.postValue(CartResult(false, false))
++                progressbarObservable.postValue(CartResult(loading = false, sucess = false))
+                 Log.d("On Failure to hit api", t.toString())
+             }
+         })
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
+index f21a1f9..2f96a69 100644
+--- a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
+@@ -28,7 +28,7 @@ class ProductViewmodel : ViewModel() {
+             ) {
+                 Log.d("product list", response.toString())
+                 if (response.isSuccessful && response.code() == 200) {
+-                    Log.d("product list", response.body().toString())
++                    //Log.d("product list", response.body().toString())
+                     productlst.postValue(response.body())
+                     progressbarObservable.postValue(false)
+                 }
+@@ -45,9 +45,9 @@ class ProductViewmodel : ViewModel() {
+         val call = apiInterface._storeinfo
+         call.enqueue(object : Callback<Storedata> {
+             override fun onResponse(call: Call<Storedata>, response: Response<Storedata>) {
+-                Log.d("ab", response.toString())
++                //Log.d("ab", response.toString())
+                 if (response.isSuccessful && response.code() == 200) {
+-                    Log.d("ab", response.body().toString())
++                    //Log.d("ab", response.body().toString())
+                     storeinfo.postValue(response.body())
+                 }
+             }
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 0fc69b5..b12b1e8 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -16,6 +16,6 @@
+     <string name="suc_string">Order Placed</string>
+     <string name="try_string">Try Again Later</string>
+     <string name="address_string">Enter Delivery Address</string>
+-    <string name="cart_string">Select atleast one Product</string>
++    <string name="cart_string">Select at least one Product</string>
+ 
+ </resources>
+\ No newline at end of file
+-- 
+2.32.0.windows.2
+

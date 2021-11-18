@@ -1,0 +1,795 @@
+From 1a077bbb7bbe9732ddafbb3d4fba2cb732b78cf6 Mon Sep 17 00:00:00 2001
+From: Muhaiminur Rahman <muhaiminurabir@gmail.com>
+Date: Wed, 17 Nov 2021 17:43:50 +0600
+Subject: [PATCH 2/7] mvvm added with cart added
+
+---
+ .idea/misc.xml                                |   2 +-
+ app/build.gradle                              |   1 +
+ .../misfit/opnmart/adapter/ProductAdapter.kt  |   9 +-
+ .../misfit/opnmart/repository/ProductRepo.kt  |  47 +++
+ .../opnmart/utility/ProductClickListener.kt   |   7 +
+ .../com/misfit/opnmart/view/DashboaredPage.kt |  99 +++---
+ .../opnmart/viewmodel/ProductViewmodel.kt     |  70 ++++
+ .../viewmodel/ProductViewmodelFactory.kt      |  14 +
+ .../res/layout/activity_dashboredpage.xml     | 323 ++++++++++--------
+ app/src/main/res/layout/recycler_product.xml  |  16 +-
+ app/src/main/res/values/strings.xml           |   3 +
+ 11 files changed, 392 insertions(+), 199 deletions(-)
+ create mode 100644 app/src/main/java/com/misfit/opnmart/repository/ProductRepo.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/utility/ProductClickListener.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
+ create mode 100644 app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt
+
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+index b9916c1..f9308e0 100644
+--- a/.idea/misc.xml
++++ b/.idea/misc.xml
+@@ -6,7 +6,7 @@
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/bg_drop_shadow.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/drawable/ic_default.xml" value="0.1" />
+         <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/activity_dashboredpage.xml" value="0.25" />
+-        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_product.xml" value="0.1" />
++        <entry key="..\:/OFFICE/OPN/app/src/main/res/layout/recycler_product.xml" value="0.12" />
+       </map>
+     </option>
+   </component>
+diff --git a/app/build.gradle b/app/build.gradle
+index cc77b80..380a257 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -65,4 +65,5 @@ dependencies {
+ 
+     //GSON
+     implementation 'com.google.code.gson:gson:2.8.6'
++
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+index 269a09e..a4cf8b2 100644
+--- a/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
++++ b/app/src/main/java/com/misfit/opnmart/adapter/ProductAdapter.kt
+@@ -10,11 +10,15 @@ import com.bumptech.glide.Glide
+ import com.misfit.opnmart.R
+ import com.misfit.opnmart.databinding.RecyclerProductBinding
+ import com.misfit.opnmart.model.Productdatum
++import com.misfit.opnmart.utility.ProductClickListener
++import com.misfit.opnmart.view.DashboaredPage
+ 
+-class ProductAdapter(to: List<Productdatum>?, c: Context?) :
++class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: ProductClickListener) :
+     RecyclerView.Adapter<ProductAdapter.Todo_View_Holder>() {
+     private var context: Context? = c
+     private var list: List<Productdatum>? = to
++    private var click: ProductClickListener? = proClickListener
++
+ 
+     class Todo_View_Holder(view: RecyclerProductBinding) :
+         RecyclerView.ViewHolder(view.getRoot()) {
+@@ -43,6 +47,9 @@ class ProductAdapter(to: List<Productdatum>?, c: Context?) :
+             Glide.with(context!!)
+                 .load(bodyResponse.imageUrl.toString())
+                 .into(holder.productBinding.comingImage)
++            holder.productBinding.productAdd.setOnClickListener {
++                click?.onproductClickListener(bodyResponse)
++            }
+             //holder.productBinding.productName.text = bodyResponse.name
+             //holder.productBinding.productPrice.text = bodyResponse.price.toString()
+         } catch (e: Exception) {
+diff --git a/app/src/main/java/com/misfit/opnmart/repository/ProductRepo.kt b/app/src/main/java/com/misfit/opnmart/repository/ProductRepo.kt
+new file mode 100644
+index 0000000..7192f22
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/repository/ProductRepo.kt
+@@ -0,0 +1,47 @@
++package com.misfit.opnmart.repository
++
++import android.util.Log
++import androidx.lifecycle.MutableLiveData
++import com.misfit.opnmart.http.Controller
++import com.misfit.opnmart.model.Productdatum
++import retrofit2.Call
++import retrofit2.Callback
++import retrofit2.Response
++
++
++class ProductRepo {
++
++    private val apiInterface = Controller.create()
++    val repoproductlist = MutableLiveData<List<Productdatum>>()
++    var progressbarObservable = MutableLiveData<Boolean>()
++    fun get_productlis() {
++        progressbarObservable.value = true
++        val call = apiInterface._productlist
++        call.enqueue(object : Callback<List<Productdatum>> {
++            override fun onResponse(
++                call: Call<List<Productdatum>>,
++                response: Response<List<Productdatum>>
++            ) {
++                Log.d("product list", response.toString())
++                if (response.isSuccessful && response.code() == 200) {
++                    Log.d("product list", response.body().toString())
++                    repoproductlist.postValue(response.body())
++                    progressbarObservable.postValue(false)
++                }
++            }
++
++            override fun onFailure(call: Call<List<Productdatum>>, t: Throwable) {
++                Log.d("Error", t.message.toString())
++                progressbarObservable.postValue(false)
++            }
++        })
++    }
++
++    fun getrepoproductData(): MutableLiveData<List<Productdatum>> {
++        return repoproductlist
++    }
++
++    fun getProgress(): MutableLiveData<Boolean> {
++        return progressbarObservable
++    }
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/utility/ProductClickListener.kt b/app/src/main/java/com/misfit/opnmart/utility/ProductClickListener.kt
+new file mode 100644
+index 0000000..9abe0a9
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/utility/ProductClickListener.kt
+@@ -0,0 +1,7 @@
++package com.misfit.opnmart.utility
++
++import com.misfit.opnmart.model.Productdatum
++
++interface ProductClickListener {
++    fun onproductClickListener(data: Productdatum)
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+index 3c21ffa..d21964f 100644
+--- a/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
++++ b/app/src/main/java/com/misfit/opnmart/view/DashboaredPage.kt
+@@ -1,27 +1,23 @@
+ package com.misfit.opnmart.view
+ 
+-import android.app.PendingIntent.getActivity
+ import android.content.Context
+ import android.os.Bundle
+ import android.util.Log
+ import androidx.appcompat.app.AppCompatActivity
++import androidx.lifecycle.ViewModelProvider
+ import androidx.recyclerview.widget.DefaultItemAnimator
+-import androidx.recyclerview.widget.LinearLayoutManager
+-import androidx.recyclerview.widget.RecyclerView
++import androidx.recyclerview.widget.GridLayoutManager
+ import com.misfit.opnmart.R
+ import com.misfit.opnmart.adapter.ProductAdapter
+ import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
+-import com.misfit.opnmart.databinding.ActivityDashboredpageBinding.inflate
+ import com.misfit.opnmart.http.Controller
+ import com.misfit.opnmart.model.Productdatum
+-import com.misfit.opnmart.model.Storedata
+-import retrofit2.Call
+-import retrofit2.Callback
+-import retrofit2.Response
+-import java.lang.Exception
+-import java.util.ArrayList
++import com.misfit.opnmart.utility.ProductClickListener
++import com.misfit.opnmart.viewmodel.ProductViewmodel
++import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
++import java.util.*
+ 
+-class DashboaredPage : AppCompatActivity() {
++class DashboaredPage : AppCompatActivity(), ProductClickListener {
+     private lateinit var binding: ActivityDashboredpageBinding
+     private val apiInterface = Controller.create()
+ 
+@@ -29,68 +25,63 @@ class DashboaredPage : AppCompatActivity() {
+     var list = ArrayList<Productdatum>()
+     var context: Context? = null
+ 
++    private lateinit var viewModel: ProductViewmodel
++
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         binding = ActivityDashboredpageBinding.inflate(layoutInflater)
+         setContentView(binding.root)
+         context = this
+-
+-        getstor()
+-        getproductlist()
++        val factory = ProductViewmodelFactory()
++        viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
+         initial_list()
+     }
+ 
+-    private fun getstor() {
+-        val call = apiInterface._storeinfo
+-        call.enqueue(object : Callback<Storedata> {
+-            override fun onResponse(call: Call<Storedata>, response: Response<Storedata>) {
+-                Log.d("ab", response.toString())
+-                if (response.isSuccessful && response.code() == 200) {
+-                    Log.d("ab", response.body().toString())
+-                    binding.store = response.body()
+-                }
++    fun observer() {
++        viewModel.productlst.observe(this, androidx.lifecycle.Observer {
++            if (it != null) {
++                Log.d("list", it.toString())
++                list.clear()
++                list.addAll(it)
++                adapter!!.notifyDataSetChanged()
+             }
+-
+-            override fun onFailure(call: Call<Storedata>, t: Throwable) {
+-                Log.d("Error", t.message.toString())
+-
++        })
++        viewModel.storeinfo.observe(this, androidx.lifecycle.Observer {
++            if (it != null) {
++                binding.store = it
+             }
+         })
+-    }
+-
+-    private fun getproductlist() {
+-        val call = apiInterface._productlist
+-        call.enqueue(object : Callback<List<Productdatum>> {
+-            override fun onResponse(
+-                call: Call<List<Productdatum>>,
+-                response: Response<List<Productdatum>>
+-            ) {
+-                Log.d("product list", response.toString())
+-                if (response.isSuccessful && response.code() == 200) {
+-                    Log.d("product list", response.body().toString())
+-                    list.addAll(response.body()!!)
+-                    adapter!!.notifyDataSetChanged()
+-                    //binding.store = response.body()
++        viewModel.catlist.observe(this, androidx.lifecycle.Observer {
++            if (it != null) {
++                var price: Int = 0
++                for (cart in it) {
++                    price = price + cart.price
+                 }
+-            }
+-
+-            override fun onFailure(call: Call<List<Productdatum>>, t: Throwable) {
+-                Log.d("Error", t.message.toString())
+-
++                binding.storeSubtotal.text =
++                    StringBuilder(context?.resources?.getText(R.string.item_string)).append(price.toString())
+             }
+         })
+     }
+ 
+-    fun initial_list() {
++    private fun initial_list() {
+         try {
+-            adapter = ProductAdapter(list, context)
+-            val mLayoutManager: RecyclerView.LayoutManager =
+-                LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+-            binding.storeProductlist.setLayoutManager(mLayoutManager)
+-            binding.storeProductlist.setItemAnimator(DefaultItemAnimator())
+-            binding.storeProductlist.setAdapter(adapter)
++            adapter = ProductAdapter(list, context, this)
++            binding.storeProductlist.layoutManager = GridLayoutManager(this, 2)
++            binding.storeProductlist.itemAnimator = DefaultItemAnimator()
++            binding.storeProductlist.adapter = adapter
++            observer()
++            viewModel.get_productlis()
++            viewModel.getstor()
+         } catch (e: Exception) {
+             Log.d("Error Line Number", Log.getStackTraceString(e))
+         }
+     }
++
++    fun addtocart(unit: Int) {
++
++    }
++
++    override fun onproductClickListener(data: Productdatum) {
++        viewModel.add_to_cart(data)
++    }
+ }
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
+new file mode 100644
+index 0000000..aaf41b0
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodel.kt
+@@ -0,0 +1,70 @@
++package com.misfit.opnmart.viewmodel
++
++import android.util.Log
++import androidx.lifecycle.MutableLiveData
++import androidx.lifecycle.ViewModel
++import com.misfit.opnmart.http.Controller
++import com.misfit.opnmart.model.Productdatum
++import com.misfit.opnmart.model.Storedata
++import com.misfit.opnmart.repository.ProductRepo
++import retrofit2.Call
++import retrofit2.Callback
++import retrofit2.Response
++
++class ProductViewmodel : ViewModel() {
++    private val apiInterface = Controller.create()
++    var progressbarObservable = MutableLiveData<Boolean>()
++    var storeinfo = MutableLiveData<Storedata>()
++    var productlst = MutableLiveData<List<Productdatum>>()
++    var catlist = MutableLiveData<List<Productdatum>>()
++    var newlist = arrayListOf<Productdatum>()
++    var productrepo = ProductRepo()
++
++    fun get_productlis() {
++        progressbarObservable.postValue(true)
++        val call = apiInterface._productlist
++        call.enqueue(object : Callback<List<Productdatum>> {
++            override fun onResponse(
++                call: Call<List<Productdatum>>,
++                response: Response<List<Productdatum>>
++            ) {
++                Log.d("product list", response.toString())
++                if (response.isSuccessful && response.code() == 200) {
++                    Log.d("product list", response.body().toString())
++                    productlst.postValue(response.body())
++                    progressbarObservable.postValue(false)
++                }
++            }
++
++            override fun onFailure(call: Call<List<Productdatum>>, t: Throwable) {
++                Log.d("Error", t.message.toString())
++                progressbarObservable.postValue(false)
++            }
++        })
++    }
++
++    fun getstor() {
++        val call = apiInterface._storeinfo
++        call.enqueue(object : Callback<Storedata> {
++            override fun onResponse(call: Call<Storedata>, response: Response<Storedata>) {
++                Log.d("ab", response.toString())
++                if (response.isSuccessful && response.code() == 200) {
++                    Log.d("ab", response.body().toString())
++                    storeinfo.postValue(response.body())
++                }
++            }
++
++            override fun onFailure(call: Call<Storedata>, t: Throwable) {
++                Log.d("Error", t.message.toString())
++
++            }
++        })
++    }
++
++    fun add_to_cart(cart: Productdatum) {
++        newlist.add(cart)
++        catlist.postValue(newlist)
++    }
++
++
++}
+\ No newline at end of file
+diff --git a/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt
+new file mode 100644
+index 0000000..c512d3a
+--- /dev/null
++++ b/app/src/main/java/com/misfit/opnmart/viewmodel/ProductViewmodelFactory.kt
+@@ -0,0 +1,14 @@
++package com.misfit.opnmart.viewmodel
++
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.ViewModelProvider
++
++class ProductViewmodelFactory : ViewModelProvider.Factory {
++    override fun <T : ViewModel?> create(modelClass: Class<T>): T {
++        if (modelClass.isAssignableFrom(ProductViewmodel::class.java)) {
++            return ProductViewmodel() as T
++        }
++        throw IllegalArgumentException("UnknownViewModel")
++    }
++
++}
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/activity_dashboredpage.xml b/app/src/main/res/layout/activity_dashboredpage.xml
+index 579b91c..aee5033 100644
+--- a/app/src/main/res/layout/activity_dashboredpage.xml
++++ b/app/src/main/res/layout/activity_dashboredpage.xml
+@@ -8,159 +8,198 @@
+             type="com.misfit.opnmart.model.Storedata" />
+     </data>
+ 
+-    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
++    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+         xmlns:app="http://schemas.android.com/apk/res-auto"
+         xmlns:tools="http://schemas.android.com/tools"
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
++        android:orientation="vertical"
+         tools:context=".view.DashboaredPage">
+ 
+-        <LinearLayout
++        <ScrollView
+             android:layout_width="match_parent"
+-            android:layout_height="wrap_content"
+-            android:orientation="vertical">
++            android:layout_height="0dp"
++            android:layout_weight="1">
+ 
+-            <androidx.cardview.widget.CardView
++            <LinearLayout
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+-                android:layout_margin="5dp"
+-                app:cardCornerRadius="5dp"
+-                app:cardElevation="5dp"
+-                app:contentPadding="5dp">
++                android:orientation="vertical"
++                android:padding="5dp">
+ 
+-                <androidx.constraintlayout.widget.ConstraintLayout
++                <androidx.cardview.widget.CardView
+                     android:layout_width="match_parent"
+-                    android:layout_height="wrap_content">
+-
+-                    <TextView
+-                        android:id="@+id/store_name"
+-                        android:layout_width="100dp"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@string/store_string"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_hint1"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintEnd_toStartOf="@id/store_name_value"
+-                        app:layout_constraintStart_toStartOf="parent"
+-                        app:layout_constraintTop_toTopOf="parent" />
+-
+-                    <TextView
+-                        android:id="@+id/store_name_value"
+-                        android:layout_width="wrap_content"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@{store.name}"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_blue1"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintStart_toEndOf="@id/store_name"
+-                        app:layout_constraintTop_toTopOf="parent" />
+-
+-                    <TextView
+-                        android:id="@+id/store_ratting"
+-                        android:layout_width="100dp"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@string/rating_string"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_hint1"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintEnd_toStartOf="@+id/store_ratting_value"
+-                        app:layout_constraintStart_toStartOf="parent"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_name" />
+-
+-                    <TextView
+-                        android:id="@+id/store_ratting_value"
+-                        android:layout_width="wrap_content"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@{store.rating+``}"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_ash4"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintStart_toEndOf="@+id/store_ratting"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_name_value" />
+-
+-                    <TextView
+-                        android:id="@+id/store_open"
+-                        android:layout_width="100dp"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@string/open_string"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_hint1"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintEnd_toStartOf="@+id/store_open_value"
+-                        app:layout_constraintStart_toStartOf="parent"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_ratting" />
+-
+-                    <TextView
+-                        android:id="@+id/store_open_value"
+-                        android:layout_width="wrap_content"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@{store.openingTime}"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_ash4"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintStart_toEndOf="@+id/store_open"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_ratting_value" />
+-
+-                    <TextView
+-                        android:id="@+id/store_close"
+-                        android:layout_width="100dp"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@string/end_string"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_hint1"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintEnd_toStartOf="@+id/store_close_value"
+-                        app:layout_constraintStart_toStartOf="parent"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_open" />
+-
+-                    <TextView
+-                        android:id="@+id/store_close_value"
+-                        android:layout_width="wrap_content"
+-                        android:layout_height="wrap_content"
+-                        android:layout_margin="3dp"
+-                        android:padding="5dp"
+-                        android:text="@{store.closingTime}"
+-                        android:textAlignment="textStart"
+-                        android:textColor="@color/app_ash4"
+-                        android:textSize="@dimen/font_m"
+-                        android:textStyle="normal"
+-                        app:layout_constraintStart_toEndOf="@+id/store_close"
+-                        app:layout_constraintTop_toBottomOf="@+id/store_open_value" />
+-                </androidx.constraintlayout.widget.ConstraintLayout>
+-            </androidx.cardview.widget.CardView>
+-
+-            <View
+-                android:layout_width="match_parent"
+-                android:layout_height="1dp"
+-                android:layout_margin="2dp"
+-                android:background="@drawable/bg_drop_shadow" />
++                    android:layout_height="wrap_content"
++                    android:layout_margin="5dp"
++                    app:cardCornerRadius="5dp"
++                    app:cardElevation="5dp"
++                    app:contentPadding="5dp">
++
++                    <androidx.constraintlayout.widget.ConstraintLayout
++                        android:layout_width="match_parent"
++                        android:layout_height="wrap_content">
++
++                        <TextView
++                            android:id="@+id/store_name"
++                            android:layout_width="100dp"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@string/store_string"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_hint1"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintEnd_toStartOf="@id/store_name_value"
++                            app:layout_constraintStart_toStartOf="parent"
++                            app:layout_constraintTop_toTopOf="parent" />
++
++                        <TextView
++                            android:id="@+id/store_name_value"
++                            android:layout_width="wrap_content"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@{store.name}"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_blue1"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintStart_toEndOf="@id/store_name"
++                            app:layout_constraintTop_toTopOf="parent" />
++
++                        <TextView
++                            android:id="@+id/store_ratting"
++                            android:layout_width="100dp"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@string/rating_string"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_hint1"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintEnd_toStartOf="@+id/store_ratting_value"
++                            app:layout_constraintStart_toStartOf="parent"
++                            app:layout_constraintTop_toBottomOf="@+id/store_name" />
++
++                        <TextView
++                            android:id="@+id/store_ratting_value"
++                            android:layout_width="wrap_content"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@{store.rating+``}"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_ash4"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintStart_toEndOf="@+id/store_ratting"
++                            app:layout_constraintTop_toBottomOf="@+id/store_name_value" />
++
++                        <TextView
++                            android:id="@+id/store_open"
++                            android:layout_width="100dp"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@string/open_string"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_hint1"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintEnd_toStartOf="@+id/store_open_value"
++                            app:layout_constraintStart_toStartOf="parent"
++                            app:layout_constraintTop_toBottomOf="@+id/store_ratting" />
++
++                        <TextView
++                            android:id="@+id/store_open_value"
++                            android:layout_width="wrap_content"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@{store.openingTime}"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_ash4"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintStart_toEndOf="@+id/store_open"
++                            app:layout_constraintTop_toBottomOf="@+id/store_ratting_value" />
++
++                        <TextView
++                            android:id="@+id/store_close"
++                            android:layout_width="100dp"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@string/end_string"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_hint1"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintEnd_toStartOf="@+id/store_close_value"
++                            app:layout_constraintStart_toStartOf="parent"
++                            app:layout_constraintTop_toBottomOf="@+id/store_open" />
++
++                        <TextView
++                            android:id="@+id/store_close_value"
++                            android:layout_width="wrap_content"
++                            android:layout_height="wrap_content"
++                            android:layout_margin="3dp"
++                            android:padding="5dp"
++                            android:text="@{store.closingTime}"
++                            android:textAlignment="textStart"
++                            android:textColor="@color/app_ash4"
++                            android:textSize="@dimen/font_m"
++                            android:textStyle="normal"
++                            app:layout_constraintStart_toEndOf="@+id/store_close"
++                            app:layout_constraintTop_toBottomOf="@+id/store_open_value" />
++                    </androidx.constraintlayout.widget.ConstraintLayout>
++                </androidx.cardview.widget.CardView>
++
++                <View
++                    android:layout_width="match_parent"
++                    android:layout_height="1dp"
++                    android:layout_margin="2dp"
++                    android:background="@drawable/bg_drop_shadow" />
+ 
+-            <androidx.recyclerview.widget.RecyclerView
+-                android:id="@+id/store_productlist"
+-                android:layout_width="match_parent"
+-                android:layout_height="wrap_content"
+-                android:layout_margin="5dp" />
+-        </LinearLayout>
+-    </ScrollView>
++                <androidx.recyclerview.widget.RecyclerView
++                    android:id="@+id/store_productlist"
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_margin="15dp" />
++            </LinearLayout>
++        </ScrollView>
++
++        <View
++            android:layout_width="match_parent"
++            android:layout_height="1dp"
++            android:layout_margin="2dp"
++            android:background="@drawable/bg_drop_shadow" />
++
++        <TextView
++            android:id="@+id/store_subtotal"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="3dp"
++            android:padding="5dp"
++            android:text="@{@string/item_string.concat(` 0`)}"
++            android:textAlignment="textEnd"
++            android:textColor="@color/app_ash4"
++            android:textSize="@dimen/font_xl"
++            android:textStyle="normal" />
++
++        <com.google.android.material.button.MaterialButton
++            android:id="@+id/store_orderplace"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:background="@color/app_ash4"
++            android:text="@string/checkout_string"
++            android:textAlignment="center"
++            android:textColor="@color/white"
++            android:textSize="@dimen/font_xl"
++            android:textStyle="bold"
++            app:backgroundTint="@null" />
++    </LinearLayout>
+ </layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/recycler_product.xml b/app/src/main/res/layout/recycler_product.xml
+index 340790d..6a07389 100644
+--- a/app/src/main/res/layout/recycler_product.xml
++++ b/app/src/main/res/layout/recycler_product.xml
+@@ -14,6 +14,7 @@
+         android:layout_marginStart="5dp"
+         android:layout_marginTop="5dp"
+         android:layout_marginEnd="5dp"
++        android:layout_marginBottom="5dp"
+         app:cardCornerRadius="5dp"
+         app:cardElevation="5dp"
+         app:cardMaxElevation="5dp">
+@@ -27,7 +28,7 @@
+             <ImageView
+                 android:id="@+id/coming_image"
+                 android:layout_width="match_parent"
+-                android:layout_height="150dp"
++                android:layout_height="100dp"
+                 android:contentDescription="@string/app_name"
+                 android:scaleType="fitXY"
+                 android:src="@drawable/ic_default" />
+@@ -61,6 +62,19 @@
+                 android:textColor="@color/app_ash4"
+                 android:textSize="@dimen/font_m"
+                 android:textStyle="normal" />
++
++            <com.google.android.material.button.MaterialButton
++                android:id="@+id/product_add"
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:layout_margin="5dp"
++                android:background="@color/app_ash1"
++                android:text="@string/addcart_string"
++                android:textAlignment="center"
++                android:textColor="@color/white"
++                android:textSize="@dimen/font_xl"
++                android:textStyle="bold"
++                app:backgroundTint="@null" />
+         </LinearLayout>
+     </androidx.cardview.widget.CardView>
+ </layout>
+\ No newline at end of file
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 2a7c542..1e4e2b0 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -6,4 +6,7 @@
+     <string name="end_string">End Time : </string>
+     <string name="name_string">Name : </string>
+     <string name="price_string">Price : </string>
++    <string name="addcart_string">Add to Cart</string>
++    <string name="checkout_string">Checkout</string>
++    <string name="item_string">Item Added : </string>
+ </resources>
+\ No newline at end of file
+-- 
+2.32.0.windows.2
+
