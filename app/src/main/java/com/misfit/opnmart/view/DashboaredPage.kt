@@ -3,7 +3,6 @@ package com.misfit.opnmart.view
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.provider.AlarmClock.EXTRA_MESSAGE
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -17,7 +16,7 @@ import com.misfit.opnmart.model.Productdatum
 import com.misfit.opnmart.utility.Keyword
 import com.misfit.opnmart.utility.ProductClickListener
 import com.misfit.opnmart.viewmodel.ProductViewmodel
-import com.misfit.opnmart.viewmodel.ProductViewmodelFactory
+import com.misfit.opnmart.viewmodel.ViewmodelFactory
 import java.util.*
 
 class DashboaredPage : AppCompatActivity(), ProductClickListener {
@@ -38,7 +37,7 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
         setContentView(binding.root)
         try {
             context = this
-            val factory = ProductViewmodelFactory()
+            val factory = ViewmodelFactory()
             viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
             initial_list()
             binding.storeOrderplace.setOnClickListener {
