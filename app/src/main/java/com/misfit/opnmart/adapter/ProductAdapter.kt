@@ -11,7 +11,6 @@ import com.misfit.opnmart.R
 import com.misfit.opnmart.databinding.RecyclerProductBinding
 import com.misfit.opnmart.model.Productdatum
 import com.misfit.opnmart.utility.ProductClickListener
-import com.misfit.opnmart.view.DashboaredPage
 
 class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: ProductClickListener) :
     RecyclerView.Adapter<ProductAdapter.Todo_View_Holder>() {
@@ -45,13 +44,11 @@ class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: Pro
         try {
             holder.bind(bodyResponse)
             Glide.with(context!!)
-                .load(bodyResponse.imageUrl.toString())
+                .load(bodyResponse.imageUrl)
                 .into(holder.productBinding.comingImage)
             holder.productBinding.productAdd.setOnClickListener {
                 click?.onproductClickListener(bodyResponse)
             }
-            //holder.productBinding.productName.text = bodyResponse.name
-            //holder.productBinding.productPrice.text = bodyResponse.price.toString()
         } catch (e: Exception) {
             Log.d("Error Line Number", Log.getStackTraceString(e))
         }

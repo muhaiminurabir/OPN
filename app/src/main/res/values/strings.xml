@@ -16,5 +16,6 @@
     <string name="suc_string">Order Placed</string>
     <string name="try_string">Try Again Later</string>
     <string name="address_string">Enter Delivery Address</string>
+    <string name="cart_string">Select atleast one Product</string>
 
 </resources>

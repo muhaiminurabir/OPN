@@ -24,7 +24,6 @@ public interface ApiService {
     Call<List<Productdatum>> get_productlist();
 
     //3 get checkout information
-    //@FormUrlEncoded
     @Headers({"Content-Type:application/json", "Accept: application/json"})
     @POST("order")
     Call<Void> send_checkout(@Body HashMap sendCart);

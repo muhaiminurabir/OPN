@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import com.misfit.opnmart.http.Controller
 import com.misfit.opnmart.model.Productdatum
 import com.misfit.opnmart.model.Storedata
-import com.misfit.opnmart.repository.ProductRepo
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -18,7 +17,6 @@ class ProductViewmodel : ViewModel() {
     var productlst = MutableLiveData<List<Productdatum>>()
     var catlist = MutableLiveData<List<Productdatum>>()
     var newlist = arrayListOf<Productdatum>()
-    var productrepo = ProductRepo()
 
     fun get_productlis() {
         progressbarObservable.postValue(true)

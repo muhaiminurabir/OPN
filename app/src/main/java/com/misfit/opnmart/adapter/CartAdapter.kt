@@ -9,23 +9,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.misfit.opnmart.R
 import com.misfit.opnmart.databinding.RecyclerCartBinding
-import com.misfit.opnmart.databinding.RecyclerProductBinding
 import com.misfit.opnmart.model.Productdatum
-import com.misfit.opnmart.utility.ProductClickListener
-import com.misfit.opnmart.view.DashboaredPage
 
-class CartAdapter(to: List<Productdatum>?, c: Context?, proClickListener: ProductClickListener) :
+class CartAdapter(to: List<Productdatum>?, c: Context?) :
     RecyclerView.Adapter<CartAdapter.Todo_View_Holder>() {
     private var context: Context? = c
     private var list: List<Productdatum>? = to
-    private var click: ProductClickListener? = proClickListener
 
 
     class Todo_View_Holder(view: RecyclerCartBinding) :
         RecyclerView.ViewHolder(view.getRoot()) {
         var productBinding: RecyclerCartBinding = view
         fun bind(s: Productdatum?) {
-            productBinding.setProduct(s)
+            productBinding.product = s
             productBinding.executePendingBindings()
         }
 
@@ -46,7 +42,7 @@ class CartAdapter(to: List<Productdatum>?, c: Context?, proClickListener: Produc
         try {
             holder.bind(bodyResponse)
             Glide.with(context!!)
-                .load(bodyResponse.imageUrl.toString())
+                .load(bodyResponse.imageUrl)
                 .into(holder.productBinding.cartImage)
         } catch (e: Exception) {
             Log.d("Error Line Number", Log.getStackTraceString(e))
