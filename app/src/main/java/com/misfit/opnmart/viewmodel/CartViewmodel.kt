@@ -14,22 +14,21 @@ class CartViewmodel : ViewModel() {
     var progressbarObservable = MutableLiveData<CartResult>()
 
     fun create_order(hash: HashMap<String, Any>) {
-        Log.d("ab", "pasisi")
-        progressbarObservable.postValue(CartResult(true, false))
+        progressbarObservable.postValue(CartResult(loading = true, sucess = false))
         val call = apiInterface.send_checkout(hash)
         call.enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 Log.d("Create Order", response.toString())
                 if (response.isSuccessful && response.code() == 201) {
-                    Log.d("Create Order", response.body().toString())
-                    progressbarObservable.postValue(CartResult(false, true))
+                    //Log.d("Create Order", response.body().toString())
+                    progressbarObservable.postValue(CartResult(loading = false, sucess = true))
                 } else {
                     Log.d("Create Order", response.errorBody().toString())
                 }
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
-                progressbarObservable.postValue(CartResult(false, false))
+                progressbarObservable.postValue(CartResult(loading = false, sucess = false))
                 Log.d("On Failure to hit api", t.toString())
             }
         })

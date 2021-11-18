@@ -18,7 +18,7 @@ class CartAdapter(to: List<Productdatum>?, c: Context?) :
 
 
     class Todo_View_Holder(view: RecyclerCartBinding) :
-        RecyclerView.ViewHolder(view.getRoot()) {
+        RecyclerView.ViewHolder(view.root) {
         var productBinding: RecyclerCartBinding = view
         fun bind(s: Productdatum?) {
             productBinding.product = s

@@ -28,7 +28,7 @@ class ProductViewmodel : ViewModel() {
             ) {
                 Log.d("product list", response.toString())
                 if (response.isSuccessful && response.code() == 200) {
-                    Log.d("product list", response.body().toString())
+                    //Log.d("product list", response.body().toString())
                     productlst.postValue(response.body())
                     progressbarObservable.postValue(false)
                 }
@@ -45,9 +45,9 @@ class ProductViewmodel : ViewModel() {
         val call = apiInterface._storeinfo
         call.enqueue(object : Callback<Storedata> {
             override fun onResponse(call: Call<Storedata>, response: Response<Storedata>) {
-                Log.d("ab", response.toString())
+                //Log.d("ab", response.toString())
                 if (response.isSuccessful && response.code() == 200) {
-                    Log.d("ab", response.body().toString())
+                    //Log.d("ab", response.body().toString())
                     storeinfo.postValue(response.body())
                 }
             }

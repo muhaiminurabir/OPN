@@ -12,7 +12,7 @@ class ProgressDialog : DialogFragment() {
             // Use the Builder class for convenient dialog construction
             val builder = AlertDialog.Builder(it)
             // Create the AlertDialog object and return it
-            val inflater = requireActivity().layoutInflater;
+            val inflater = requireActivity().layoutInflater
 
             // Inflate and set the layout for the dialog
             // Pass null as the parent view because its going in the dialog layout

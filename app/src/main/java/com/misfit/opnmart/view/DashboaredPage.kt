@@ -11,23 +11,23 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.misfit.opnmart.R
 import com.misfit.opnmart.adapter.ProductAdapter
 import com.misfit.opnmart.databinding.ActivityDashboredpageBinding
-import com.misfit.opnmart.http.Controller
 import com.misfit.opnmart.model.Productdatum
 import com.misfit.opnmart.utility.Keyword
 import com.misfit.opnmart.utility.ProductClickListener
+import com.misfit.opnmart.utility.Utility
 import com.misfit.opnmart.viewmodel.ProductViewmodel
 import com.misfit.opnmart.viewmodel.ViewmodelFactory
 import java.util.*
 
 class DashboaredPage : AppCompatActivity(), ProductClickListener {
     private lateinit var binding: ActivityDashboredpageBinding
-    private val apiInterface = Controller.create()
+    private var adapter: ProductAdapter? = null
+    private var list = ArrayList<Productdatum>()
+    private var cartList = ArrayList<Productdatum>()
+    private var context: Context? = null
+    private var price: Int = 0
+    private lateinit var utility: Utility
 
-    var adapter: ProductAdapter? = null
-    var list = ArrayList<Productdatum>()
-    var cartlist = ArrayList<Productdatum>()
-    var context: Context? = null
-    var price: Int = 0
 
     private lateinit var viewModel: ProductViewmodel
 
@@ -37,23 +37,30 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
         setContentView(binding.root)
         try {
             context = this
+            utility = Utility(this)
             val factory = ViewmodelFactory()
             viewModel = ViewModelProvider(this, factory).get(ProductViewmodel::class.java)
-            initial_list()
+            initialList()
             binding.storeOrderplace.setOnClickListener {
-                var extras = Bundle()
-                extras.putSerializable(Keyword.CARTPAGE, cartlist)
-                val intent = Intent(this, CheckoutPage::class.java)
-                intent.putExtras(extras)
-                startActivity(intent)
+                if (cartList.size > 0) {
+                    val extras = Bundle()
+                    extras.putSerializable(Keyword.CARTPAGE, cartList)
+                    val intent = Intent(this, CheckoutPage::class.java)
+                    intent.putExtras(extras)
+                    startActivity(intent)
+                } else {
+                    utility.showToast(
+                        resources.getString(R.string.cart_string)
+                    )
+                }
             }
         } catch (e: Exception) {
-            Log.d("Error Line Number", Log.getStackTraceString(e));
+            Log.d("Error Line Number", Log.getStackTraceString(e))
         }
     }
 
-    fun observer() {
-        viewModel.productlst.observe(this, androidx.lifecycle.Observer {
+    private fun observer() {
+        viewModel.productlst.observe(this, {
             if (it != null) {
                 Log.d("list", it.toString())
                 list.clear()
@@ -61,26 +68,26 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
                 adapter!!.notifyDataSetChanged()
             }
         })
-        viewModel.storeinfo.observe(this, androidx.lifecycle.Observer {
+        viewModel.storeinfo.observe(this, {
             if (it != null) {
                 binding.store = it
             }
         })
-        viewModel.catlist.observe(this, androidx.lifecycle.Observer {
+        viewModel.catlist.observe(this, {
             if (it != null) {
-                cartlist.clear()
-                cartlist.addAll(it)
+                cartList.clear()
+                cartList.addAll(it)
                 price = 0
                 for (cart in it) {
-                    price = price + cart.price
+                    price += cart.price
                 }
                 binding.storeSubtotal.text =
-                    StringBuilder(context?.resources?.getText(R.string.item_string)).append(price.toString())
+                    StringBuilder(resources.getString(R.string.item_string)).append(price.toString())
             }
         })
     }
 
-    private fun initial_list() {
+    private fun initialList() {
         try {
             adapter = ProductAdapter(list, context, this)
             binding.storeProductlist.layoutManager = GridLayoutManager(this, 2)
@@ -92,10 +99,6 @@ class DashboaredPage : AppCompatActivity(), ProductClickListener {
         } catch (e: Exception) {
             Log.d("Error Line Number", Log.getStackTraceString(e))
         }
-    }
-
-    fun addtocart(unit: Int) {
-
     }
 
     override fun onproductClickListener(data: Productdatum) {

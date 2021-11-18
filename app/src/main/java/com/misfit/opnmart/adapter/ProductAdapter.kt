@@ -20,10 +20,10 @@ class ProductAdapter(to: List<Productdatum>?, c: Context?, proClickListener: Pro
 
 
     class Todo_View_Holder(view: RecyclerProductBinding) :
-        RecyclerView.ViewHolder(view.getRoot()) {
+        RecyclerView.ViewHolder(view.root) {
         var productBinding: RecyclerProductBinding = view
         fun bind(s: Productdatum?) {
-            productBinding.setProduct(s)
+            productBinding.product = s
             productBinding.executePendingBindings()
         }
 
